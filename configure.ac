@@ -35,11 +35,11 @@ AC_C_CONST
 AC_CHECK_FUNCS([gethostname])
 
 AC_CONFIG_FILES([
-								 Makefile
-								 src/Makefile
-								 libs/clogging.pc
-								 libs/Makefile
-								 examples/Makefile
-								 ])
+	Makefile
+	src/Makefile
+	libs/clogging.pc
+	libs/Makefile
+	examples/Makefile
+	])
 
 AC_OUTPUT
