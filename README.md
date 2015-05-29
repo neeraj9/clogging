@@ -24,3 +24,17 @@ following to get started.
     }
 
 The above is a starting point to get things started.
+
+## Using Specific Logging Mechanism
+
+You can alternatively use a specific instance of logging as follows:
+
+    #include <clogging/basic_logging.h>
+
+    int main(int argc, char *argv[])
+    {
+        init_logging(argv[0], "", LOG_LEVEL_DEBUG);
+        LOG_DEBUG("A basic debug log looks like this");
+        return 0;
+    }
+
