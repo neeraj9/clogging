@@ -20,18 +20,31 @@
 #ifndef CLOGGING_BASIC_LOGGING_H
 #define CLOGGING_BASIC_LOGGING_H
 
-/* must be the first thing to include before anything else */
 #include "logging_common.h"
 
-/* When LOGGING_WITH_THREAD_LOCAL_STORAGE is NOT defined.
- * For MT (multi threaded) applications the init_logging()
- * should be called from the main thread, although sufficient
- * protection is provided in the code even if that is not
- * the case.
- * The value passed to threadname should be "" (empty string).
- *
- * When LOGGING_WITH_THREAD_LOCAL_STORAGE is defined
- * then init_logging() should be called for each of the threads,
+#define BASIC_INIT_LOGGING(pn, tn, level) \
+	clogging_basic_init((pn), (tn), (level))
+
+/* Lets follow the ISO C standard of 1999 and use ## __VA_ARGS__ so as
+ * to avoid the neccessity of providing even a single argument after
+ * format. That is its possible that the user did not provide any
+ * variable arguments and the format is the entier message.
+ */
+#define BASIC_LOG_ERROR(format, ...) \
+	clogging_basic_logmsg(__func__, __LINE__, LOG_LEVEL_ERROR, format, ## __VA_ARGS__)
+#define BASIC_LOG_WARN(format, ...) \
+	clogging_basic_logmsg(__func__, __LINE__, LOG_LEVEL_WARN, format, ## __VA_ARGS__)
+#define BASIC_LOG_INFO(format, ...) \
+	clogging_basic_logmsg(__func__, __LINE__, LOG_LEVEL_INFO, format, ## __VA_ARGS__)
+#define BASIC_LOG_DEBUG(format, ...) \
+	clogging_basic_logmsg(__func__, __LINE__, LOG_LEVEL_DEBUG, format, ## __VA_ARGS__)
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/*
+ * init_logging() should be called for each of the threads,
  * including the main thread.
  * The value passed to threadname should be "" (empty) or "-main"
  * for the main thread and "-<threadname>" (where <threadname> identifies
@@ -39,26 +52,20 @@
  * call threadname = "-worker1" for worker1 or say
  * threadname = "-tcplistener" for a worker who listens for tcp connections.
  */
-int init_logging(const char *progname, const char *threadname,
-		 enum LogLevel level);
+int clogging_basic_init(const char *progname, const char *threadname,
+		        enum LogLevel level);
 
-/* When LOGGING_WITH_THREAD_LOCAL_STORAGE is NOT defined.
- * For MT programs its recommended to set log level from the
- * main thread, although sufficient protection is in place.
- * Note that there is no lock but integer assignment is supposed
- * to be atomic.
- *
- * When LOGGING_WITH_THREAD_LOCAL_STORAGE is defined.
- * There is a MT safe implementation.
+/*
+ * It is a MT safe implementation.
  */
-void set_loglevel(enum LogLevel level);
+void clogging_basic_set_loglevel(enum LogLevel level);
 
 /* Get the current log level.
  *
  * Irrespective of LOGGING_WITH_THREAD_LOCAL_STORAGE this method
  * will do an atomic read, which is MT safe.
  */
-enum LogLevel get_loglevel(void);
+enum LogLevel clogging_basic_get_loglevel(void);
 
 /* This will fail if init_logging() is not invoked earlier.
  * There is an additional cost to validating the initiatized state
@@ -70,15 +77,15 @@ enum LogLevel get_loglevel(void);
  * This has performance cost when logging is done a lot, so
  * dont use this method if your application does a lot of logging.
  *
- * When LOGGING_WITH_THREAD_LOCAL_STORAGE is not defined.
- * There are additional actions done to make it MT safe without
- * using mutexes.
- *
- * When LOGGING_WITH_THREAD_LOCAL_STORAGE is defined.
  * It is a MT safe implementation.
  *
  */
-void logmsg(const char *funcname,
-	    int linenum, enum LogLevel level, const char *format, ...);
+void clogging_basic_logmsg(const char *funcname,
+			   int linenum, enum LogLevel level,
+			   const char *format, ...);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* CLOGGING_BASIC_LOGGING_H */

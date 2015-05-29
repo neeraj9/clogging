@@ -21,11 +21,14 @@
 #include "config.h"
 #endif
 
-#ifndef LOGGING_OPTIONAL_TLS
-#define LOGGING_OPTIONAL_TLS
-#endif
-
 #include "logging_common.h"
+
+#include <stdio.h>		/* snprintf() */
+#include <time.h>		/* gmtime_r() */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
  * Get the string representation of logging level.
@@ -33,21 +36,7 @@
 const char *
 get_log_level_as_cstring(enum LogLevel level)
 {
-	/* Initialization is not thread-safe when thread local storage
-	 * is not enabled via LOGGING_WITH_THREAD_LOCAL_STORAGE, but the
-	 * following explanation should hopefully suffice.
-	 *
-	 * Although the level_to_str[] is a static array and in MT
-	 * programs this is an issue when called simultaneously,
-	 * so a crude workaround (instead of if/else is to
-	 * call this method as first thing when the logging is getting
-	 * initialized. This will set the function static correctly for
-	 * other threads to use without any race condition.
-	 *
-	 * An alternate approach would be to use if/else, but I like
-	 * lookup better anyways.
-	 *
-	 * When LOGGING_WITH_THREAD_LOCAL_STORAGE is defined.
+	/*
 	 * A better alternative would be to use thread local storage,
 	 * via the __thread gnu directive. This will add a cost to
 	 * it though, which is inherently due to the way thread local
@@ -62,7 +51,7 @@ get_log_level_as_cstring(enum LogLevel level)
 	 * logging_common.h, so update this mapping table to
 	 * match that.
 	 */
-	static const LOGGING_OPTIONAL_TLS char *level_to_str[] = {
+	static const __thread char *level_to_str[] = {
 		"ERROR",	/* 0 */
 		"WARN",		/* 1 */
 		"INFO",		/* 2 */
@@ -71,3 +60,19 @@ get_log_level_as_cstring(enum LogLevel level)
 
 	return level_to_str[level];
 }
+
+int
+time_to_cstr(time_t *t, char *timestr, int maxlen)
+{
+	struct tm tms;
+
+	gmtime_r(t, &tms);
+	snprintf(timestr, maxlen, "%04d-%02d-%02dT%02d:%02d:%02d+00:00",
+		 tms.tm_year + 1900, tms.tm_mon + 1, tms.tm_mday,
+		 tms.tm_hour, tms.tm_min, tms.tm_sec);
+}
+
+
+#ifdef __cplusplus
+}
+#endif

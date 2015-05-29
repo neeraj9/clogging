@@ -21,10 +21,6 @@
 #include "config.h"
 #endif
 
-#ifndef LOGGING_OPTIONAL_TLS
-#define LOGGING_OPTIONAL_TLS
-#endif
-
 #include "basic_logging.h"
 
 #include <stdio.h>		/* fprintf() and friends */
@@ -38,23 +34,14 @@
 #define MAX_PROG_NAME_LEN 40
 #define MAX_HOSTNAME_LEN 20
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
  * The use of global static is tricky and prone to issues in MT (multi-threaded)
- * environments, but then the init_logging should be called ONLY once.
- * Additionally, the set_loglevel() should also be called typically ONLY once
- * and even if its called multiple times the integer assignment of
- * g_level is an atomic write.
- *
- * We are not using mutexes because that will be too much of an
- * overhead while lock/unlock in the logmsg() implementation. Additionally,
- * the set_loglevel() is just an integer assignment so its atomic
- *
- *
- * Alternative approach is to use thread local storage, when the
- * LOGGING_WITH_THREAD_LOCAL_STORAGE is defined and
- * LOGGING_OPTIONAL_TLS is set to __thread (gnu directive) for
- * thread local storage. In this case there is no MT issue since
+ * environments, but then the clogging_basic_init should be called ONLY once.
+ * In this case there is no MT issue since
  * each of the thread will have its own copy of the file static variable.
  * The side effect is to call init_logging() separately for each of the
  * threads. This differs from the fact when thread local storage is not
@@ -62,35 +49,67 @@
  * once.
  *
  */
-static LOGGING_OPTIONAL_TLS char g_progname[MAX_PROG_NAME_LEN] = {0};
-static LOGGING_OPTIONAL_TLS char g_threadname[MAX_PROG_NAME_LEN] = {0};
-static LOGGING_OPTIONAL_TLS char g_hostname[MAX_HOSTNAME_LEN] = {0};
-static LOGGING_OPTIONAL_TLS int g_pid = 0;
-static LOGGING_OPTIONAL_TLS enum LogLevel g_level = DEFAULT_LOG_LEVEL;
+static __thread char g_progname[MAX_PROG_NAME_LEN] = {0};
+static __thread char g_threadname[MAX_PROG_NAME_LEN] = {0};
+static __thread char g_hostname[MAX_HOSTNAME_LEN] = {0};
+static __thread int g_pid = 0;
+static __thread enum LogLevel g_level = DEFAULT_LOG_LEVEL;
 /* safeguard calling init_logging multiple times */
-static LOGGING_OPTIONAL_TLS int g_is_logging_initialized = 0;
+static __thread int g_is_logging_initialized = 0;
 
-/*
- * Get the current time in c string with '\0' termination
- * and returns the length of the string.
- * The current implementation follows the ISO 8601 date and time
- * combined format with a resolution of seconds in the UTC timezone.
- * In case of error -1 is retured.
- */
 int
-time_to_cstr(time_t *t, char *timestr, int maxlen)
+clogging_basic_init(const char *progname, const char *threadname,
+		    enum LogLevel level)
 {
-	struct tm tms;
+	int rc = 0;
 
-	gmtime_r(t, &tms);
-	snprintf(timestr, maxlen, "%04d-%02d-%02dT%02d:%02d:%02d+00:00",
-		 tms.tm_year + 1900, tms.tm_mon + 1, tms.tm_mday,
-		 tms.tm_hour, tms.tm_min, tms.tm_sec);
+	if (g_is_logging_initialized > 0) {
+		fprintf(stderr, "logging is already initialized or in the"
+			" process of initialization.\n");
+		return -1;
+	}
+
+	/* first thing to do is block any other thread in running logging
+	 * initialization (if that is done, though its bad and should be
+	 * done in the main thread ONLY.
+	 */
+	g_is_logging_initialized = 1;
+
+	/* Intentionally call the method so that any function static variables
+	 * in get_log_level_as_cstring() are correctly initialized.
+	 * Note that this should be done in any logging implementation (like
+	 * many other things), although the argument and the return values
+	 * are unimportant.
+	 */
+	(void)get_log_level_as_cstring(LOG_LEVEL_ERROR);
+
+	strncpy(g_progname, progname, MAX_PROG_NAME_LEN);
+	strncpy(g_threadname, threadname, MAX_PROG_NAME_LEN);
+	rc = gethostname(g_hostname, MAX_HOSTNAME_LEN);
+	if (rc < 0) {
+		strncpy(g_hostname, "unknown", MAX_HOSTNAME_LEN);
+	}
+	g_pid = (int)getpid();
+	g_level = level;
+
+	return 0;
 }
 
 void
-logmsg(const char *funcname, int linenum, enum LogLevel level,
-       const char *format, ...)
+clogging_basic_set_loglevel(enum LogLevel level)
+{
+	g_level = level;
+}
+
+enum LogLevel
+clogging_basic_get_loglevel(void)
+{
+	return g_level;
+}
+
+void
+clogging_basic_logmsg(const char *funcname, int linenum, enum LogLevel level,
+		      const char *format, ...)
 {
 	/* ISO 8601 date and time format with sec */
 	const int time_str_len = 26;
@@ -111,14 +130,6 @@ logmsg(const char *funcname, int linenum, enum LogLevel level,
 		fprintf(stderr, "logging is not initialized yet\n");
 		return;
 	}
-
-	/* only when thread local storage is not used the memory
-	 * barrier becomes relevant.
-	 */
-#ifndef LOGGING_WITH_THREAD_LOCAL_STORAGE
-	/* read memory barrier */
-	__sync_synchronize();
-#endif
 
 	time(&now);
 	len = time_to_cstr(&now, time_str, time_str_len);
@@ -154,62 +165,6 @@ logmsg(const char *funcname, int linenum, enum LogLevel level,
 	/* ignore the error if it's there */
 }
 
-int
-init_logging(const char *progname, const char *threadname, enum LogLevel level)
-{
-	int rc = 0;
-
-	if (g_is_logging_initialized > 0) {
-		fprintf(stderr, "logging is already initialized or in the"
-			" process of initialization.\n");
-		return -1;
-	}
-
-	/* when thread local storage is used then we shouldn't worry
-	 * about memory barrier, but lets not pollute things for initialization
-	 * code when thread local storage is enabled.
-	 */
-
-	/* read memory barrier, so its guaranteed to read the global
-	 * value of g_is_logging_initialized before its set after
-	 * the barrier.
-	 */
-	__sync_synchronize();
-
-	/* first thing to do is block any other thread in running logging
-	 * initialization (if that is done, though its bad and should be
-	 * done in the main thread ONLY.
-	 */
-	g_is_logging_initialized = 1;
-
-	/* Intentionally call the method so that any function static variables
-	 * in get_log_level_as_cstring() are correctly initialized.
-	 * Note that this should be done in any logging implementation (like
-	 * many other things), although the argument and the return values
-	 * are unimportant.
-	 */
-	(void)get_log_level_as_cstring(LOG_LEVEL_ERROR);
-
-	strncpy(g_progname, progname, MAX_PROG_NAME_LEN);
-	strncpy(g_threadname, threadname, MAX_PROG_NAME_LEN);
-	rc = gethostname(g_hostname, MAX_HOSTNAME_LEN);
-	if (rc < 0) {
-		strncpy(g_hostname, "unknown", MAX_HOSTNAME_LEN);
-	}
-	g_pid = (int)getpid();
-	g_level = level;
-
-	return 0;
+#ifdef __cplusplus
 }
-
-void
-set_loglevel(enum LogLevel level)
-{
-	g_level = level;
-}
-
-enum LogLevel
-get_loglevel(void)
-{
-	return g_level;
-}
+#endif

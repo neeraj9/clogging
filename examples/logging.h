@@ -20,18 +20,31 @@
 #ifndef CLOGGING_LOGGING_H
 #define CLOGGING_LOGGING_H
 
-/* include appropriate logging, but in the future
- * more logging mechanisms will be added here, which
- * will be conditionally available via #ifdef.
- *
- * Alternatively the user can directly include the
- * appropriate logging instance (in this case basic_logging)
- * directly.
- *
- * In short this header is just the placeholder for a single
- * logging implementation which will be selected (in future)
- * based on flags.
- */
 #include "basic_logging.h"
+
+#define INIT_LOGGING BASIC_INIT_LOGGING
+
+/* If DISABLE_DEBUG_LOGS is defined then the DEBUG logs are compiled out
+ * and cannot be switched on dynamically. This is done to ensure that
+ * production system have DEBUG logs compiled out and save critical
+ * cycles which otherwise would be wasted in function call to basic_logmsg()
+ * and then returning when log level is below DEBUG.
+ */
+
+#define LOG_ERROR BASIC_LOG_ERROR
+#define LOG_WARN BASIC_LOG_WARN
+#define LOG_INFO BASIC_LOG_INFO
+
+#ifndef DISABLE_DEBUG_LOGS
+#define LOG_DEBUG BASIC_LOG_DEBUG
+#else
+/* If not verbose then dont even compile the DEBUG logs, which are typically
+ * cpu intensive function calls in the critical path.
+ * If you want dynamicity then use INFO instead and set the log level to
+ * WARN, which can be changed to INFO dynamically anytime.
+ */
+#define LOG_DEBUG(format, ...)
+#endif
+
 
 #endif /* CLOGGING_LOGGING_H */

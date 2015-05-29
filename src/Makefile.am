@@ -9,5 +9,4 @@ libsrc_la_SOURCES = \
 
 pkginclude_HEADERS = \
  basic_logging.h \
- logging.h \
  logging_common.h
