@@ -14,6 +14,7 @@ A logging library for c programming language
 Take a look at the examples for details, but basically you could do the
 following to get started.
 
+    /* save as test.c */
     #include <clogging/basic_logging.h>
 
     int main(int argc, char *argv[])
@@ -22,6 +23,11 @@ following to get started.
         BASIC_LOG_DEBUG("A basic debug log looks like this");
         return 0;
     }
+
+Now you can compile this test.c as follows:
+
+    $ gcc -lclogging test.c
+
 
 The above is a starting point to get things started.
 
