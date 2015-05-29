@@ -17,8 +17,8 @@
  *  along with clogging.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef BASIC_LOGGING_H
-#define BASIC_LOGGING_H
+#ifndef CLOGGING_BASIC_LOGGING_H
+#define CLOGGING_BASIC_LOGGING_H
 
 /* must be the first thing to include before anything else */
 #include "logging_common.h"
@@ -81,4 +81,4 @@ enum LogLevel get_loglevel(void);
 void logmsg(const char *funcname,
 	    int linenum, enum LogLevel level, const char *format, ...);
 
-#endif /* BASIC_LOGGING_H */
+#endif /* CLOGGING_BASIC_LOGGING_H */

@@ -17,8 +17,8 @@
  *  along with clogging.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LOGGING_H
-#define LOGGING_H
+#ifndef CLOGGING_LOGGING_H
+#define CLOGGING_LOGGING_H
 
 /* include appropriate logging, but in the future
  * more logging mechanisms will be added here, which
@@ -34,4 +34,4 @@
  */
 #include "basic_logging.h"
 
-#endif /*LOGGING_H */
+#endif /* CLOGGING_LOGGING_H */

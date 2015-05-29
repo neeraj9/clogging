@@ -8,7 +8,7 @@ AC_CONFIG_SRCDIR([src/basic_logging.c])
 AC_CONFIG_HEADERS([src/config.h])
 
 # safe logging for multi-threaded environment
-AC_DEFINE([LOGGING_WITH_THREAD_LOCAL_STORAGE], [1], [Use thread local storage for MT-safety])
+AC_DEFINE([LOGGING_OPTIONAL_TLS], [__thread], [Use thread local storage for MT-safety])
 
 # Checks for programs.
 AM_PROG_AR([ar])

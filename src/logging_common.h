@@ -17,16 +17,8 @@
  *  along with clogging.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef LOGGING_COMMON_H
-#define LOGGING_COMMON_H
-
-#include "config.h"
-
-#ifdef LOGGING_WITH_THREAD_LOCAL_STORAGE
-#define LOGGING_OPTIONAL_TLS  __thread
-#else
-#define LOGGING_OPTIONAL_TLS
-#endif
+#ifndef CLOGGING_LOGGING_COMMON_H
+#define CLOGGING_LOGGING_COMMON_H
 
 /* If VERBOSE is NOT defined then the DEBUG logs are compiled out
  * and cannot be switched on dynamically. This is done to ensure that
@@ -100,4 +92,4 @@ enum LogLevel {
  */
 const char *get_log_level_as_cstring(enum LogLevel level);
 
-#endif /* LOGGING_COMMON_H */
+#endif /* CLOGGING_LOGGING_COMMON_H */
