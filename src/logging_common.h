@@ -20,6 +20,8 @@
 #ifndef LOGGING_COMMON_H
 #define LOGGING_COMMON_H
 
+#include "config.h"
+
 #ifdef LOGGING_WITH_THREAD_LOCAL_STORAGE
 #define LOGGING_OPTIONAL_TLS  __thread
 #else
