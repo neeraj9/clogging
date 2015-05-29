@@ -24,6 +24,10 @@
 
 #define BASIC_INIT_LOGGING(pn, tn, level) \
 	clogging_basic_init((pn), (tn), (level))
+#define BASIC_SET_LOG_LEVEL(level) \
+	clogging_basic_set_loglevel(level)
+#define BASIC_GET_LOG_LEVEL() \
+	clogging_basic_get_loglevel()
 
 /* Lets follow the ISO C standard of 1999 and use ## __VA_ARGS__ so as
  * to avoid the neccessity of providing even a single argument after

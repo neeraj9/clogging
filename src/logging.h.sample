@@ -23,6 +23,8 @@
 #include "basic_logging.h"
 
 #define INIT_LOGGING BASIC_INIT_LOGGING
+#define SET_LOG_LEVEL BASIC_SET_LOG_LEVEL
+#define GET_LOG_LEVEL BASIC_LOG_LEVEL
 
 /* If DISABLE_DEBUG_LOGS is defined then the DEBUG logs are compiled out
  * and cannot be switched on dynamically. This is done to ensure that
