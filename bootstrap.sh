@@ -2,7 +2,7 @@
 #
 # copyright (c) 2015 Neeraj Sharma <neeraj.sharma@alumni.iitg.ernet.in>
 #
-# License: Apache License 2.0 or later
+# License: LGPLv3 or later
 
 aclocal
 libtoolize --force
