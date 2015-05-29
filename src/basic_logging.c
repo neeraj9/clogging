@@ -57,6 +57,11 @@ static __thread enum LogLevel g_level = DEFAULT_LOG_LEVEL;
 /* safeguard calling init_logging multiple times */
 static __thread int g_is_logging_initialized = 0;
 
+/* store the number of message dropped as a counter for
+ * later statistics collection.
+ */
+static __thread uint64_t g_basic_num_msg_drops = 0;
+
 int
 clogging_basic_init(const char *progname, const char *threadname,
 		    enum LogLevel level)
@@ -137,6 +142,7 @@ clogging_basic_logmsg(const char *funcname, int linenum, enum LogLevel level,
 		/* huh! I'd like to crash at this point but
 		 * lets just log the message, which is a must.
 		 */
+		++g_basic_num_msg_drops;
 		return;
 	}
 
@@ -148,6 +154,7 @@ clogging_basic_logmsg(const char *funcname, int linenum, enum LogLevel level,
 		/* cannot recover from this one, so lets just ignore it
 		 * for now rather than logging it somewhere.
 		 */
+		++g_basic_num_msg_drops;
 		return;
 	}
 	va_end(ap);
@@ -159,10 +166,22 @@ clogging_basic_logmsg(const char *funcname, int linenum, enum LogLevel level,
 	 *		<LEVEL> = DEBUG | INFO | WARNING | ERROR
 	 *		<CONTENT> = <FUNCTION/MODULE>: <APPLICATION_MESSAGE>
 	 */
-	fprintf(stderr, "%s %s %s%s[%d] %s %s(%d): %s\n", time_str, g_hostname,
-		g_progname, g_threadname, g_pid, level_str, funcname, linenum,
-		msg);
+	rc = fprintf(stderr, "%s %s %s%s[%d] %s %s(%d): %s\n", time_str,
+		     g_hostname, g_progname, g_threadname, g_pid, level_str,
+		     funcname, linenum, msg);
 	/* ignore the error if it's there */
+	if (rc < 0) {
+		++g_basic_num_msg_drops;
+	}
+	/* Note that when less number of characters are written, even then
+	 * we dont keep track of that.
+	 */
+}
+
+uint64_t
+clogging_basic_get_num_dropped_messages(void)
+{
+	return g_basic_num_msg_drops;
 }
 
 #ifdef __cplusplus

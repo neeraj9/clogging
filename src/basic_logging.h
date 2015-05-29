@@ -22,12 +22,16 @@
 
 #include "logging_common.h"
 
+#include <stdint.h>
+
 #define BASIC_INIT_LOGGING(pn, tn, level) \
 	clogging_basic_init((pn), (tn), (level))
 #define BASIC_SET_LOG_LEVEL(level) \
 	clogging_basic_set_loglevel(level)
 #define BASIC_GET_LOG_LEVEL() \
 	clogging_basic_get_loglevel()
+#define BASIC_GET_NUM_DROPPED_MESSAGES() \
+	clogging_basic_get_num_dropped_messages()
 
 /* Lets follow the ISO C standard of 1999 and use ## __VA_ARGS__ so as
  * to avoid the neccessity of providing even a single argument after
@@ -75,6 +79,8 @@ enum LogLevel clogging_basic_get_loglevel(void);
  * There is an additional cost to validating the initiatized state
  * but its worth the check.
  *
+ * This function writes the log to stderr (or standard-error).
+ *
  * IMPORTANT: In case of MT (multi threaded) implementation
  * the logmsg() will cause the lock/unlock to happen since the
  * underlying mechanism for logging is fprintf to stderr.
@@ -87,6 +93,11 @@ enum LogLevel clogging_basic_get_loglevel(void);
 void clogging_basic_logmsg(const char *funcname,
 			   int linenum, enum LogLevel level,
 			   const char *format, ...);
+
+/* Get the number of messages dropped due to overload or
+ * internal errors.
+ */
+uint64_t clogging_basic_get_num_dropped_messages(void);
 
 #ifdef __cplusplus
 }

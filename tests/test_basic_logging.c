@@ -27,5 +27,6 @@ int main(int argc, char *argv[])
 	assert(GET_LOG_LEVEL() == LOG_LEVEL_DEBUG);
 	SET_LOG_LEVEL(LOG_LEVEL_INFO);
 	assert(GET_LOG_LEVEL() == LOG_LEVEL_INFO);
+	assert(GET_NUM_DROPPED_MESSAGES() == 0);
 	return 0;
 }

@@ -25,6 +25,7 @@
 #define INIT_LOGGING BASIC_INIT_LOGGING
 #define SET_LOG_LEVEL BASIC_SET_LOG_LEVEL
 #define GET_LOG_LEVEL BASIC_GET_LOG_LEVEL
+#define GET_NUM_DROPPED_MESSAGES BASIC_GET_NUM_DROPPED_MESSAGES
 
 /* If DISABLE_DEBUG_LOGS is defined then the DEBUG logs are compiled out
  * and cannot be switched on dynamically. This is done to ensure that
