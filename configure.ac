@@ -39,7 +39,7 @@ AC_CONFIG_FILES([
 	src/Makefile
 	libs/clogging.pc
 	libs/Makefile
-	examples/Makefile
+	tests/Makefile
 	])
 
 AC_OUTPUT
