@@ -15,7 +15,6 @@
  *
  */
 
-#include "barrier.h"		/* smp_rmb() */
 #include "basic_logging.h"
 
 #include <stdio.h>		/* fprintf() and friends */
@@ -108,7 +107,7 @@ logmsg(const char *funcname, int linenum, enum LogLevel level,
 	 */
 #ifndef LOGGING_WITH_THREAD_LOCAL_STORAGE
 	/* read memory barrier */
-	smp_rmb();
+	__sync_synchronize();
 #endif
 
 	time(&now);
@@ -165,7 +164,7 @@ init_logging(const char *progname, const char *threadname, enum LogLevel level)
 	 * value of g_is_logging_initialized before its set after
 	 * the barrier.
 	 */
-	smp_rmb();
+	__sync_synchronize();
 
 	/* first thing to do is block any other thread in running logging
 	 * initialization (if that is done, though its bad and should be
