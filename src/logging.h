@@ -20,7 +20,18 @@
 #ifndef LOGGING_H
 #define LOGGING_H
 
-/* Include appropriate logging */
+/* include appropriate logging, but in the future
+ * more logging mechanisms will be added here, which
+ * will be conditionally available via #ifdef.
+ *
+ * Alternatively the user can directly include the
+ * appropriate logging instance (in this case basic_logging)
+ * directly.
+ *
+ * In short this header is just the placeholder for a single
+ * logging implementation which will be selected (in future)
+ * based on flags.
+ */
 #include "basic_logging.h"
 
 #endif /*LOGGING_H */
