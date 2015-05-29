@@ -30,3 +30,36 @@
 
 # Debug files
 *.dSYM/
+
+# backup files
+*~
+
+# autotools generated files
+.deps
+ar-lib
+Makefile
+Makefile.in
+aclocal.m4
+autom4te.cache/*
+build
+compile
+config.guess
+config.h
+config.h.in
+config.log
+config.status
+config.sub
+configure
+depcomp
+install
+install-sh
+libtool
+ltmain.sh
+m4
+missing
+stamp-h1
+test-driver
+
+# libs
+libs/.libs
+libs/clogging.pc

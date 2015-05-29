@@ -33,9 +33,10 @@ AC_CHECK_FUNCS([gethostname])
 
 AC_CONFIG_FILES([
 								 Makefile
+								 src/Makefile
 								 libs/clogging.pc
 								 libs/Makefile
-								 src/Makefile
+								 examples/Makefile
 								 ])
 
 AC_OUTPUT
