@@ -63,3 +63,9 @@ test-driver
 # libs
 libs/.libs
 libs/clogging.pc
+
+# test related ignore
+.libs
+test-suite.log
+test_*.log
+test_*.trs
