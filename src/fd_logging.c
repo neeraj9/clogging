@@ -213,7 +213,7 @@ clogging_fd_logmsg(const char *funcname, int linenum, enum LogLevel level,
 	 *		<CONTENT> = <FUNCTION/MODULE>: <APPLICATION_MESSAGE>
 	 */
 	/* leave the first two bytes for size */
-	len = snprintf(&g_fd_total_message[2], TOTAL_MSG_BYTES,
+	len = snprintf(&g_fd_total_message[2], TOTAL_MSG_BYTES - 2,
 		       "%s %s %s%s[%d] %s %s(%d): %s\n", time_str,
 		       g_fd_hostname, g_fd_progname, g_fd_threadname, g_fd_pid,
 		       level_str, funcname, linenum, msg);
