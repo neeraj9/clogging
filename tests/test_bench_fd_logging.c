@@ -171,7 +171,6 @@ int main(int argc, const char *argv[])
 	rc = prctl(PR_GET_NAME, (unsigned long)(pname), 0, 0, 0);
 	assert(rc == 0);
 
-	fprintf(stderr, ">>>> argc = %d\n", argc);
 	if (argc < 6) {
 		num_loops = 1000;
 		num_processes = 1;
