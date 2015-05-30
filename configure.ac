@@ -34,6 +34,10 @@ AC_C_CONST
 # Checks for library functions.
 AC_CHECK_FUNCS([gethostname])
 
+# enable perf to show correct function names by uncommenting the
+# following line
+#CFLAGS+=" -fno-omit-frame-pointer"
+
 AC_CONFIG_FILES([
 	Makefile
 	src/Makefile
