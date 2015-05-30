@@ -1,8 +1,8 @@
+[![Build Status](https://travis-ci.org/neeraj9/clogging.svg?branch=master)](https://travis-ci.org/neeraj9/clogging)
+
 # clogging
 
 A logging library for c programming language
-
-Building with travis: TODO
 
 ## Building
 
