@@ -106,17 +106,29 @@ int main(int argc, char** argv)
 	int rc = 0;
 	char pname[MAX_PROCESSNAME_SIZE] = {0};
 	int num_loops = 0;
+	int num_processes = 0;
+	int num_threads = 0;
 
 	rc = prctl(PR_GET_NAME, (unsigned long)(pname), 0, 0, 0);
 	assert(rc == 0);
 
-	if (argc != 4) {
-		fprintf(stderr, "%s nprocess nthreads nloop\n", pname);
-		return 1;
+	if (argc < 4) {
+		num_loops = 1000;
+		num_processes = 1;
+		num_threads = 10;
+	} else {
+		num_loops = atoi(argv[3]);
+		num_processes = atoi(argv[1]);
+		num_threads = atoi(argv[2]);
+		if (num_threads > MAX_THREADS) {
+			fprintf(stderr, "The maximum number of threads (%d)"
+				" exceeded. Please provide a lower value\n",
+				MAX_THREADS);
+			return 2;
+		}
 	}
 
-	num_loops = atoi(argv[3]);
-	runall(pname, atoi(argv[1]), atoi(argv[2]), num_loops);
+	runall(pname, num_processes, num_threads, num_loops);
 
 	return 0;
 }
