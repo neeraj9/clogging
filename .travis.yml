@@ -6,4 +6,8 @@ compiler:
 before_install:
   - sudo apt-get install -y make autoconf automake libtool
 
-script: sh bootstrap.sh && ./configure && make
+script:
+  - sh bootstrap.sh
+  - ./configure
+  - make
+  - make check
