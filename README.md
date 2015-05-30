@@ -2,6 +2,8 @@
 
 A logging library for c programming language
 
+Building with travis: TODO
+
 ## Building
 
     sh bootstrap.sh
