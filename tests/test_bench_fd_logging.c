@@ -172,9 +172,9 @@ int main(int argc, const char *argv[])
 	assert(rc == 0);
 
 	if (argc < 6) {
-		num_loops = 1000;
+		num_loops = 10;
 		num_processes = 1;
-		num_threads = 10;
+		num_threads = 2;
 		fd = 1;  /* out to stdout */
 	} else {
 		struct sockaddr_in addr;

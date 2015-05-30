@@ -113,9 +113,9 @@ int main(int argc, char** argv)
 	assert(rc == 0);
 
 	if (argc < 4) {
-		num_loops = 1000;
+		num_loops = 10;
 		num_processes = 1;
-		num_threads = 10;
+		num_threads = 2;
 	} else {
 		num_loops = atoi(argv[3]);
 		num_processes = atoi(argv[1]);
