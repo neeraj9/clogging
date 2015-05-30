@@ -38,6 +38,19 @@ AC_CHECK_FUNCS([gethostname])
 # following line
 #CFLAGS+=" -fno-omit-frame-pointer"
 
+# find the full filename of the compiled file
+CFLAGS+=" "
+#CFLAGS+=-D__FILENAME__='"$(subst $(SOURCE_PREFIX)/,,$(readlink -f $<))"'
+#CFLAGS+=-D__FILENAME__='"$(readlink -f $<)"'
+#CFLAGS+="-D__FILENAME__='\$(top_srcdir)/$<'"
+CFLAGS+=-D__FILENAME__='"`readlink -f $< | sed -e \"s|$(SOURCE_PREFIX)/|$(PACKAGE)/|\"`"'
+CFLAGS+=" "
+
+SOURCE_PREFIX='$(shell readlink -f $(top_srcdir))'
+# substitute custom variables
+AC_SUBST(SOURCE_PREFIX)
+
+
 AC_CONFIG_FILES([
 	Makefile
 	src/Makefile
