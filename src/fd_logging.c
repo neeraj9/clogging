@@ -23,8 +23,9 @@
 
 #include "fd_logging.h"
 
-#include <stdio.h>		/* dprintf() and friends */
-#include <string.h>		/* strncpy() */
+#include <errno.h>		/* errno */
+#include <stdio.h>		/* fprintf() and friends */
+#include <string.h>		/* strncpy(), strerror_r() */
 #include <sys/time.h>		/* gmtime_r() */
 #include <sys/types.h>
 #include <time.h>		/* time() */
@@ -139,6 +140,7 @@ clogging_fd_logmsg(const char *funcname, int linenum, enum LogLevel level,
 	const char *level_str = 0;
 	char msg[MAX_LOG_MSG_LEN];
 	va_list ap;
+	ssize_t bytes_sent = 0;
 
 	/* ignore logs which are filtered out */
 	if (level > g_fd_level) {
@@ -224,7 +226,22 @@ clogging_fd_logmsg(const char *funcname, int linenum, enum LogLevel level,
 	/* encode the length in big-endian format */
 	g_fd_total_message[0] = (len >> 8) & 0x00ff;
 	g_fd_total_message[1] = (len & 0x00ff);
-	write(g_fd_fd, g_fd_total_message, len + 2);
+	bytes_sent = write(g_fd_fd, g_fd_total_message, len + 2);
+#if VERBOSE
+	if (bytes_sent < 0) {
+		int err = errno;
+		char errmsg[256];
+		strerror_r(err, errmsg, sizeof(errmsg));
+		fprintf(stderr, "%s%s: write() failed, e=%d, errmsg=[%s]\n",
+			g_fd_progname, g_fd_threadname, err, errmsg);
+	} else if (bytes_sent != (len + 2)) {
+		fprintf(stderr, "%s%s: could write only %d out of %d bytes\n",
+			g_fd_progname, g_fd_threadname, bytes_sent, len + 2);
+	} else {
+		fprintf(stderr, "%s%s: success\n",
+			g_fd_progname, g_fd_threadname);
+	}
+#endif /* VERBOSE */
 }
 
 uint64_t
