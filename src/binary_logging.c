@@ -24,11 +24,12 @@
 #include "fd_logging.h"
 
 #include <stdio.h>		/* dprintf() and friends */
-#include <string.h>		/* strncpy() */
+#include <string.h>		/* strncpy(), strlen() */
 #include <sys/time.h>		/* gmtime_r() */
 #include <sys/types.h>
 #include <time.h>		/* time() */
 #include <stdarg.h>		/* va_start() and friends */
+#include <stddef.h>		/* ptrdiff_t */
 #include <unistd.h>		/* getpid(), gethostname(), write() */
 
 #define MAX_PROG_NAME_LEN 40
@@ -50,8 +51,11 @@ extern "C" {
  *
  */
 static __thread char g_binary_progname[MAX_PROG_NAME_LEN] = {0};
+static __thread int g_binary_progname_length = 0;
 static __thread char g_binary_threadname[MAX_PROG_NAME_LEN] = {0};
+static __thread int g_binary_threadname_length = 0;
 static __thread char g_binary_hostname[MAX_HOSTNAME_LEN] = {0};
+static __thread int g_binary_hostname_length = 0;
 static __thread int g_binary_pid = 0;
 static __thread enum LogLevel g_binary_level = DEFAULT_LOG_LEVEL;
 static __thread int g_binary_fd = 2;  /* stderr fd is default as 2 */
@@ -62,8 +66,6 @@ static __thread int g_binary_is_logging_initialized = 0;
 /* optimization by having only one instance per thread instead of
  * stack allocation all the time.
  */
-static __thread char g_binary_total_message[TOTAL_MSG_BYTES];
-
 /* account for partial write */
 static __thread char g_binary_previous_message_offset = 0;
 static __thread char g_binary_previous_message_bytes = 0;
@@ -73,6 +75,70 @@ static __thread char g_binary_previous_message[TOTAL_MSG_BYTES];
  * later statistics collection.
  */
 static __thread uint64_t g_binary_num_msg_drops = 0;
+
+enum length_specifier {
+	LS_NONE = 0,
+	LS_H,
+	LS_HH,
+	LS_L,
+	LS_LL,
+	LS_J,
+	LS_Z,
+	LS_T,
+	LS_CAP_L
+};
+
+#define PCOPY_DATA_TYPE(store, offsetptr, llval, bytes) \
+	PCOPY_DATA_TYPE_#bytes(store, offsetptr, llval)
+
+
+/* function prototypes */
+static int fill_variable_arguments(char *store, int offset, const char *format,
+				   va_list ap);
+
+
+/* Think about an optimized approach instead of using this generic
+ * implementation in the future.
+ *
+ * This implementation stores multi-byte value in big-endian
+ * format for portability.
+ */
+inline int
+portable_copy(char *store, int *offset, unsigned long long val,
+	      ssize_t bytes)
+{
+	int newoffset = *offset;
+
+	switch (bytes) {
+	case 1:	/* 8 bits */
+		store[newoffset] = val & 0x00ff;
+		break;
+	case 2:	/* 16 bits */
+		store[newoffset] = (val >> 8) & 0x00ff;
+		store[newoffset + 1] = val & 0x00ff;
+		break;
+	case 4:	/* 32 bits */
+		store[newoffset] = (val >> 24) & 0x00ff;
+		store[newoffset + 1] = (val >> 16) & 0x00ff;
+		store[newoffset + 2] = (val >> 8) & 0x00ff;
+		store[newoffset + 3] = val & 0x00ff;
+		break;
+	case 8:	/* 64 bits */
+		store[newoffset] = (val >> 56) & 0x00ff;
+		store[newoffset + 1] = (val >> 48) & 0x00ff;
+		store[newoffset + 2] = (val >> 40) & 0x00ff;
+		store[newoffset + 3] = (val >> 32) & 0x00ff;
+		store[newoffset + 4] = (val >> 24) & 0x00ff;
+		store[newoffset + 5] = (val >> 16) & 0x00ff;
+		store[newoffset + 6] = (val >> 8) & 0x00ff;
+		store[newoffset + 7] = val & 0x00ff;
+		break;
+	default:
+		return -1;
+	}
+	*offset = newoffset + bytes;
+	return 0;
+}
 
 int
 clogging_binary_init(const char *progname, const char *threadname,
@@ -101,11 +167,14 @@ clogging_binary_init(const char *progname, const char *threadname,
 	(void)get_log_level_as_cstring(LOG_LEVEL_ERROR);
 
 	strncpy(g_binary_progname, progname, MAX_PROG_NAME_LEN);
+	g_binary_progname_length = strlen(g_binary_progname);
 	strncpy(g_binary_threadname, threadname, MAX_PROG_NAME_LEN);
+	g_binary_threadname_length = strlen(g_binary_threadname);
 	rc = gethostname(g_binary_hostname, MAX_HOSTNAME_LEN);
 	if (rc < 0) {
 		strncpy(g_binary_hostname, "unknown", MAX_HOSTNAME_LEN);
 	}
+	g_binary_hostname_length = strlen(g_binary_hostname);
 	g_binary_pid = (int)getpid();
 	g_binary_level = level;
 	g_binary_fd = fd;
@@ -130,16 +199,16 @@ clogging_binary_logmsg(const char *filename, const char *funcname,
 		       int linenum, enum LogLevel level,
 		       const char *format, ...)
 {
-	/* ISO 8601 date and time format with sec */
-	const int time_str_len = 26;
-	char time_str[time_str_len];
 	time_t now;
 	int remaining_bytes = 0;
 	int len = 0;
 	int rc = 0;
-	const char *level_str = 0;
-	char msg[MAX_LOG_MSG_LEN];
 	va_list ap;
+	char *store = g_binary_previous_message;
+	int offset = 0;
+	ssize_t bytes_written = 0;
+	int filenamelen = strlen(filename);
+	int funcnamelen = strlen(funcname);
 
 	/* ignore logs which are filtered out */
 	if (level > g_binary_level) {
@@ -154,13 +223,16 @@ clogging_binary_logmsg(const char *filename, const char *funcname,
 
 	remaining_bytes =
 		(g_binary_previous_message_bytes - g_binary_previous_message_offset);
-	if (len > 0) {
+	if (remaining_bytes > 0) {
 		len = write(g_binary_fd,
 			    &g_binary_previous_message[
 				    g_binary_previous_message_offset],
 			    remaining_bytes);
 		if (len <= 0) {
-			/* cannot write a thing, so drop the current message
+			/* cannot write a thing, so drop the current message,
+			 * but still keep the previous message since
+			 * the size is already written (and keep it for
+			 * another try later).
 			 */
 			++g_binary_num_msg_drops;
 			return;
@@ -181,57 +253,360 @@ clogging_binary_logmsg(const char *filename, const char *funcname,
 		}
 	}
 
-	time(&now);
-	len = time_to_cstr(&now, time_str, time_str_len);
-	if (len < 0) {
-		/* huh! I'd like to crash at this point but
-		 * lets just log the message, which is a must.
+	 /* <length> <timestamp> <hostname> <progname> <threadname> <pid>
+	  *   <loglevel> <file> <func> <linenum> [<arg1>, <arg2>, ...] */
+
+	/* first two bytes are used to store the overall length */
+	offset = 2;
+	/* number of seconds since the Epoch, 1970-01-01 00:00:00 +0000 (UTC)
+	 */
+	now = time(NULL);
+	if (now == ((time_t) -1)) {
+		/* cannot write a thing, so drop the current message
 		 */
 		++g_binary_num_msg_drops;
 		return;
 	}
-
-	level_str = get_log_level_as_cstring(level);
-
-	va_start(ap, format);
-	rc = vsnprintf(msg, MAX_LOG_MSG_LEN, format, ap);
+	store[offset++] = 0x80 | sizeof(now);
+	rc = portable_copy(store, &offset, now, sizeof(now));
 	if (rc < 0) {
-		/* cannot recover from this one, so lets just ignore it
-		 * for now rather than logging it somewhere.
+		/* cannot write a thing, so drop the current message
 		 */
 		++g_binary_num_msg_drops;
 		return;
 	}
+	store[offset++] = 0x00 | ((g_binary_hostname_length >> 8) & 0x00ff);
+	store[offset++] = g_binary_hostname_length & 0x00ff;
+	memcpy(&store[offset], g_binary_hostname, g_binary_hostname_length);
+	offset += g_binary_hostname_length;
+	store[offset++] = 0x00 | ((g_binary_progname_length >> 8) & 0x00ff);
+	store[offset++] = g_binary_progname_length & 0x00ff;
+	memcpy(&store[offset], g_binary_progname, g_binary_progname_length);
+	offset += g_binary_progname_length;
+	store[offset++] = 0x00 | ((g_binary_threadname_length >> 8) & 0x00ff);
+	store[offset++] = g_binary_threadname_length & 0x00ff;
+	memcpy(&store[offset], g_binary_threadname, g_binary_threadname_length);
+	offset += g_binary_threadname_length;
+	store[offset++] = 0x80 | sizeof(g_binary_pid);
+	rc = portable_copy(store, &offset, g_binary_pid, sizeof(g_binary_pid));
+	store[offset++] = 0x80 | sizeof(g_binary_level);
+	rc = portable_copy(store, &offset, g_binary_level,
+			   sizeof(g_binary_level));
+	store[offset++] = 0x00 | ((filenamelen >> 8) & 0x00ff);
+	store[offset++] = filenamelen & 0x00ff;
+	memcpy(&store[offset], filename, filenamelen);
+	offset += filenamelen;
+	store[offset++] = 0x00 | ((funcnamelen >> 8) & 0x00ff);
+	store[offset++] = funcnamelen & 0x00ff;
+	memcpy(&store[offset], funcname, funcnamelen);
+	offset += funcnamelen;
+	store[offset++] = 0x80 | sizeof(linenum);
+	rc = portable_copy(store, &offset, linenum, sizeof(linenum));
+
+	/* process format and store msg accordingly */
+	va_start(ap, format);
+	offset = fill_variable_arguments(store, offset, format, ap);
 	va_end(ap);
 
-	/* <HEADER> <MESSAGE>
-	 *	<HEADER> = <TIMESTAMP> <HOSTNAME>
-	 *	<MESSAGE> = <TAG> <LEVEL> <CONTENT>
-	 *		<TAG> = <PROGRAM><THREAD>[<PID>]
-	 *		<LEVEL> = DEBUG | INFO | WARNING | ERROR
-	 *		<CONTENT> = <FILE>__<FUNCTION/MODULE>(<LINENUM>): <APPLICATION_MESSAGE>
+	/* now that the total length is known so lets fill the
+	 * size of the payload (without the bytes occupied
+	 * by the length itself).
 	 */
-	/* leave the first two bytes for size */
-	len = snprintf(&g_binary_total_message[2], TOTAL_MSG_BYTES,
-		       "%s %s %s%s[%d] %s %s__%s(%d): %s\n", time_str,
-		       g_binary_hostname, g_binary_progname, g_binary_threadname, g_binary_pid,
-		       level_str, filename, funcname, linenum, msg);
-	if (len < 0) {
-		/* there is nothing much we can do, so return.  */
+	/* encode the length in big-endian format */
+	/* offset includes the size of length itself so subtract that. */
+	len = offset - 2;
+	store[0] = (len >> 8) & 0x00ff;
+	store[1] = (len & 0x00ff);
+
+	bytes_written = write(g_binary_fd, store, offset);
+	if (bytes_written < 0) {
+		/* just ignore stuff because we cannot write a
+		 * single bit.
+		 */
 		++g_binary_num_msg_drops;
 		return;
+	} else if (bytes_written < offset) {
+		g_binary_previous_message_offset = offset - bytes_written;
+		g_binary_previous_message_bytes = offset;
+	} else {
+		g_binary_previous_message_offset = 0;
+		g_binary_previous_message_bytes = 0;
 	}
-	/* Note that the null character at the end is not part of the len */
-	/* encode the length in big-endian format */
-	g_binary_total_message[0] = (len >> 8) & 0x00ff;
-	g_binary_total_message[1] = (len & 0x00ff);
-	write(g_binary_fd, g_binary_total_message, len + 2);
 }
 
 uint64_t
 clogging_binary_get_num_dropped_messages(void)
 {
 	return g_binary_num_msg_drops;
+}
+
+/* return the modified offset back to the caller indicating
+ * the number of bytes written in the store
+ */
+static int
+fill_variable_arguments(char *store, int offset, const char *format, va_list ap)
+{
+	long double ldbl = (long double)0.0;
+	double dbl = 0.0;
+	unsigned long long llval = 0LLU;
+	const char *tmp = format;
+	int is_type_specifier = 0;
+	enum length_specifier lspecifier = LS_NONE;
+	char *tmp_s = NULL;
+	void *tmp_p = NULL;
+	int *tmp_n = NULL;
+	int rc = 0;
+
+	/* TODO FIXME cross validate that the format specifier
+	 * contains the same number of specifiers as the variable arguments.
+	 * This should be done for additional protection.
+	 */
+	while (*tmp != '\0') {
+		if (!is_type_specifier) {
+			if (*tmp != '%') {
+				++tmp;
+				continue;
+			}
+			/* else */
+			is_type_specifier = 1;
+			++tmp;
+			continue;
+		}
+		/* designed while keeping the following url info handy
+		 * http://www.cplusplus.com/reference/cstdio/printf/
+		 */
+		switch (*tmp) {
+		case 'c':	/* char */
+			/* need a cast here since va_arg only
+			takes fully promoted types */
+			llval = va_arg(ap, unsigned long long);
+			if (lspecifier == LS_L) {
+				/* store the size in bytes before the value */
+				store[offset] = 0x80 | sizeof(int);
+				++offset;
+				rc = portable_copy(store, &offset, llval,
+						   sizeof(int));
+				/* offset is automatically updated */
+			} else {
+				/* store the size in bytes before the value */
+				store[offset] = 0x80 | 1;
+				++offset;
+				store[offset] = llval & 0x00ff;
+				++offset;
+			}
+			is_type_specifier = 0;
+			lspecifier = LS_NONE;
+			break;
+		case 'u':
+		case 'o':
+		case 'x':
+		case 'X':	/* unsigned */
+		case 'd':
+		case 'i':	/* int */
+			llval = va_arg(ap, unsigned long long);
+			if (lspecifier == LS_HH) {
+				/* store the size in bytes before the value */
+				store[offset] = 0x80 | 1;
+				++offset;
+				store[offset] = llval & 0x00ff;
+				++offset;
+			} else if (lspecifier == LS_H) {
+				/* store the size in bytes before the value */
+				store[offset] = 0x80 | sizeof(short int);
+				++offset;
+				rc = portable_copy(store, &offset, llval,
+						   sizeof(short int));
+			} else if (lspecifier == LS_L) {
+				/* store the size in bytes before the value */
+				store[offset] = 0x80 | sizeof(long int);
+				++offset;
+				rc = portable_copy(store, &offset, llval,
+						   sizeof(long int));
+			} else if (lspecifier == LS_LL) {
+				/* store the size in bytes before the value */
+				store[offset] = 0x80 | sizeof(long long int);
+				++offset;
+				rc = portable_copy(store, &offset, llval,
+						   sizeof(long long int));
+			} else if (lspecifier == LS_J) {
+				/* store the size in bytes before the value */
+				store[offset] = 0x80 | sizeof(intmax_t);
+				++offset;
+				rc = portable_copy(store, &offset, llval,
+						   sizeof(intmax_t));
+			} else if (lspecifier == LS_Z) {
+				/* store the size in bytes before the value */
+				store[offset] = 0x80 | sizeof(size_t);
+				++offset;
+				rc = portable_copy(store, &offset, llval,
+						   sizeof(size_t));
+			} else if (lspecifier == LS_T) {
+				/* store the size in bytes before the value */
+				store[offset] = 0x80 | sizeof(ptrdiff_t);
+				++offset;
+				rc = portable_copy(store, &offset, llval,
+						   sizeof(ptrdiff_t));
+			} else {
+				/* store the size in bytes before the value */
+				store[offset] = 0x80 | sizeof(int);
+				++offset;
+				rc = portable_copy(store, &offset, llval,
+						   sizeof(int));
+			}
+			is_type_specifier = 0;
+			lspecifier = LS_NONE;
+			break;
+		case 'f':
+		case 'F':
+		case 'e':
+		case 'E':
+		case 'g':
+		case 'G':
+		case 'a':
+		case 'A':	/* double */
+			/*
+			 * The IEEE 754 specifies the following encoding.
+			 * This is just for reference rather than anything else.
+			 *
+			 * +==========+===========+======+========+=======+=======+==========+===========+
+			 * | Name     | Precision | Base | Digits | E min | E max | Decimal  | Decimal   |
+			 * |          |           |      |        |       |       | digits   | E max     |
+			 * +==========+===========+======+========+=======+=======+==========+===========+
+			 * | binary64 | Double    | 2    | 53     | −1022 | +1023 | 15.95    | 307.95    |
+			 * +----------+-----------+------+--------+-------+-------+----------+-----------+
+			 * | binary128|	Quadruple | 2    | 113    | −16382| +16383| 34.02    | 4931.77   |
+			 * +----------+-----------+------+--------+-------+-------+----------+-----------+
+			 * */
+			if (lspecifier == LS_CAP_L) {
+				ldbl = va_arg(ap, long double);
+				/* store the size in bytes before the value */
+				store[offset] = 0x80 | sizeof(long double);
+				++offset;
+				memcpy(&store[offset], &ldbl,
+				       sizeof(long double));
+				offset += sizeof(long double);
+			} else {
+				dbl = va_arg(ap, double);
+				/* store the size in bytes before the value */
+				store[offset] = 0x80 | sizeof(double);
+				++offset;
+				memcpy(&store[offset], &dbl,
+				       sizeof(double));
+				offset += sizeof(double);
+			}
+			is_type_specifier = 0;
+			lspecifier = LS_NONE;
+			break;
+		case 's':	/* char* */
+			/* TODO FIXME, alternatively why not use
+			 * writev() instead of copying the contents of the
+			 * string into private buffer?
+			 * This approach is optimal though results into
+			 * an issue with partial write, which can be
+			 * complex to fix.
+			 */
+			tmp_s = va_arg(ap, char *);
+			/* There is a chance that things can crash if the
+			 * string is not null terminated.
+			 * TODO FIXME add a mechanism to restict
+			 * to a maximum size if going out of bounds.
+			 */
+			int s_len = strlen(tmp_s);
+			/* store the size in bytes before the value */
+			/* TODO FIXME the size of the string cannot be
+			 * greater than 2^15-1, which is a large
+			 * value so should not matter but something
+			 * which should be documented.
+			 */
+			s_len = s_len & 0x007f;
+			store[offset] = 0x00 | s_len;
+			++offset;
+			/* TODO FIXME validate whether the contents will
+			 * fit in the store. At present lets assume that
+			 * there is no issue with size and continue
+			 * at all places.
+			 */
+			/* copy but dont include '\0' character at the end */
+			memcpy(&store[offset], tmp_s, s_len);
+			offset += s_len;
+			is_type_specifier = 0;
+			lspecifier = LS_NONE;
+			break;
+		case 'p':	/* void* */
+			tmp_p = va_arg(ap, void *);
+			/* The idea is to print the address stored within
+			 * tmp_p for logging rather than access the
+			 * contents there.
+			 */
+			/* store the size in bytes before the value */
+			store[offset] = 0x80 | sizeof(tmp_p);
+			++offset;
+			memcpy(&store[offset], &tmp_p, sizeof(tmp_p));
+			offset += sizeof(tmp_p);
+			is_type_specifier = 0;
+			lspecifier = LS_NONE;
+			break;
+		case 'n':	/* int* */
+			tmp_n = va_arg(ap, int *);
+			/* actually we are supposed to store
+			 * the bytes written so far in this
+			 * location.
+			 */
+			*tmp_n = offset;
+			is_type_specifier = 0;
+			lspecifier = LS_NONE;
+			break;
+		case '%':
+			/* no type specifier because user said %% */
+			is_type_specifier = 0;
+			lspecifier = LS_NONE;
+			break;
+
+			/* length specifiers starts from here */
+
+		case 'h':
+			if (lspecifier == LS_NONE) {
+				lspecifier = LS_H;
+			} else if (lspecifier == LS_H) {
+				lspecifier = LS_HH;
+			} /* else its not a valid thing so ignore */
+			break;
+		case 'l':
+			if (lspecifier == LS_NONE) {
+				lspecifier = LS_L;
+			} else if (lspecifier == LS_L) {
+				lspecifier = LS_LL;
+			} /* else its not a valid thing so ignore */
+			break;
+		case 'j':
+			if (lspecifier == LS_NONE) {
+				lspecifier = LS_J;
+			} /* else its not a valid thing so ignore */
+			break;
+		case 'z':
+			if (lspecifier == LS_NONE) {
+				lspecifier = LS_Z;
+			} /* else its not a valid thing so ignore */
+			break;
+		case 't':
+			if (lspecifier == LS_NONE) {
+				lspecifier = LS_T;
+			} /* else its not a valid thing so ignore */
+			break;
+		case 'L':
+			if (lspecifier == LS_NONE) {
+				lspecifier = LS_CAP_L;
+			} /* else its not a valid thing so ignore */
+			break;
+		default:
+			/* TODO FIXME how about length indicators like 'h' or
+			 * 'l' or 'll' or 'L' or 'z' or 't' or 'hh' or 'j'
+			 */
+			break;
+		}
+		++tmp;
+	}
+	return offset;
 }
 
 #ifdef __cplusplus

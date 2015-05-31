@@ -60,7 +60,7 @@ extern "C" {
 #endif
 
 /*
- * init_logging() should be called for each of the threads,
+ * clogging_binary_init() should be called for each of the threads,
  * including the main thread.
  * The value passed to threadname should be "" (empty) or "-main"
  * for the main thread and "-<threadname>" (where <threadname> identifies
@@ -84,24 +84,20 @@ void clogging_binary_set_loglevel(enum LogLevel level);
 
 /* Get the current log level.
  *
- * Irrespective of LOGGING_WITH_THREAD_LOCAL_STORAGE this method
- * will do an atomic read, which is MT safe.
+ * It is MT safe.
  */
 enum LogLevel clogging_binary_get_loglevel(void);
 
-/* This will fail if init_logging() is not invoked earlier.
+/* This will fail if clogging_binary_init() is not invoked earlier.
  * There is an additional cost to validating the initiatized state
  * but its worth the check.
  *
- * This call will writev() system call the data as follows:
+ * The output is in binary format as follows:
  *
- * <length> <msg-chars-without-null>
+ * <length> <timestamp> <hostname> <progname> <threadname> <pid> <loglevel>
+ *   <file> <func> <linenum> [<arg1>, <arg2>, ...]
  *
- * The <length> is coded in big-endian in two bytes.
- * In case of partial write the unwitten part is buffered for
- * later delivery when this function is called again. Note that
- * message drops can happen when there is too much logging and the
- * receiver is not reading as fast.
+ * Note: <length> is coded in big-endian in two bytes.
  *
  * It is a MT safe implementation.
  *
