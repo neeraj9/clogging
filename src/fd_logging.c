@@ -57,7 +57,8 @@ static __thread char g_fd_hostname[MAX_HOSTNAME_LEN] = {0};
 static __thread int g_fd_pid = 0;
 static __thread enum LogLevel g_fd_level = DEFAULT_LOG_LEVEL;
 static __thread int g_fd_fd = 2;  /* stderr fd is default as 2 */
-static __thread int g_fd_is_socket = 0;  /* 1 when fd is a socket */
+static __thread int g_fd_prefix_length = 0;  /* 1 when prefix length to log
+						entry */
 /* safeguard calling init_logging multiple times */
 static __thread int g_fd_is_logging_initialized = 0;
 
@@ -117,8 +118,12 @@ clogging_fd_init(const char *progname, const char *threadname,
 	{
 		struct stat statbuf;
 		fstat(fd, &statbuf);
-		if (S_ISSOCK(statbuf.st_mode)) {
-			g_fd_is_socket = 1;
+		/* prefix length only when fd is a
+		 * fifo, pipe or a socket.
+		 */
+		if (S_ISSOCK(statbuf.st_mode) ||
+		    S_ISFIFO(statbuf.st_mode)) {
+			g_fd_prefix_length = 1;
 		}
 	}
 
@@ -217,9 +222,9 @@ clogging_fd_logmsg(const char *funcname, int linenum, enum LogLevel level,
 	}
 	va_end(ap);
 
-	if (g_fd_is_socket) {
+	if (g_fd_prefix_length) {
 		/* add a length field when the
-		 * fd is a socket.
+		 * fd is not a regular file.
 		 */
 		msg_offset = 2;
 	}
@@ -244,7 +249,7 @@ clogging_fd_logmsg(const char *funcname, int linenum, enum LogLevel level,
 	}
 	/* Note that the null character at the end is not part of the len */
 	/* encode the length in big-endian format */
-	if (g_fd_is_socket) {
+	if (g_fd_prefix_length) {
 		g_fd_total_message[0] = (len >> 8) & 0x00ff;
 		g_fd_total_message[1] = (len & 0x00ff);
 	}
