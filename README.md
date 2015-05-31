@@ -3,7 +3,10 @@
 
 # clogging
 
-A logging library for c programming language
+A logging library for c programming language. It adhers to
+[ISO C99](http://en.wikipedia.org/wiki/C99) C standard.
+
+> It is built with -std=gnu99.
 
 ## Building
 
@@ -67,3 +70,8 @@ The main application code will now look like as follows:
         return 0;
     }
 
+
+### References
+
+* [ISO/IEC 9899:2011](http://www.iso.org/iso/home/store/catalogue_ics/catalogue_detail_ics.htm?csnumber=57853)
+  - The ISO C99 C standard.
