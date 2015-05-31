@@ -85,18 +85,16 @@ enum LogLevel clogging_fd_get_loglevel(void);
  * There is an additional cost to validating the initiatized state
  * but its worth the check.
  *
+ * When the fd is a socket fd then the output is as follows:
  *
- * This call will write (or send in case of socket fd) the data
- * as follows:
+ * <length> <msg-chars-without-null>\n
  *
- * <magic-seq> <length> <msg-chars-without-null>
+ * Note: <length> is coded in big-endian in two bytes.
  *
- * Note that the <magic-seq>: 0xffffffffffff
- * and <length> is coded in big-endian in two bytes, so there is a header
- * or 8 bytes before the message begins. The <magic-seq> is added to
- * account for partial write and allow receiver to recover from such situations
- * since this function will not buffer the unwritten part.
- * An alternative approach could be to buffer the unwritten part.
+ * When the fd is non-socket fd then the output is as follows:
+ *
+ * <msg-chars-without-null>\n
+ *
  *
  * IMPORTANT: In case of MT (multi threaded) implementation
  * the logmsg() will cause the lock/unlock to happen since the

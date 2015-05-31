@@ -26,6 +26,7 @@
 #include <errno.h>		/* errno */
 #include <stdio.h>		/* fprintf() and friends */
 #include <string.h>		/* strncpy(), strerror_r() */
+#include <sys/stat.h>		/* fstat() */
 #include <sys/time.h>		/* gmtime_r() */
 #include <sys/types.h>
 #include <time.h>		/* time() */
@@ -56,6 +57,7 @@ static __thread char g_fd_hostname[MAX_HOSTNAME_LEN] = {0};
 static __thread int g_fd_pid = 0;
 static __thread enum LogLevel g_fd_level = DEFAULT_LOG_LEVEL;
 static __thread int g_fd_fd = 2;  /* stderr fd is default as 2 */
+static __thread int g_fd_is_socket = 0;  /* 1 when fd is a socket */
 /* safeguard calling init_logging multiple times */
 static __thread int g_fd_is_logging_initialized = 0;
 
@@ -111,6 +113,15 @@ clogging_fd_init(const char *progname, const char *threadname,
 	g_fd_level = level;
 	g_fd_fd = fd;
 
+	/* determine the type of fd */
+	{
+		struct stat statbuf;
+		fstat(fd, &statbuf);
+		if (S_ISSOCK(statbuf.st_mode)) {
+			g_fd_is_socket = 1;
+		}
+	}
+
 	return 0;
 }
 
@@ -141,6 +152,7 @@ clogging_fd_logmsg(const char *funcname, int linenum, enum LogLevel level,
 	char msg[MAX_LOG_MSG_LEN];
 	va_list ap;
 	ssize_t bytes_sent = 0;
+	int msg_offset = 0;
 
 	/* ignore logs which are filtered out */
 	if (level > g_fd_level) {
@@ -205,6 +217,13 @@ clogging_fd_logmsg(const char *funcname, int linenum, enum LogLevel level,
 	}
 	va_end(ap);
 
+	if (g_fd_is_socket) {
+		/* add a length field when the
+		 * fd is a socket.
+		 */
+		msg_offset = 2;
+	}
+
 	/* <HEADER> <MESSAGE>
 	 *	<HEADER> = <TIMESTAMP> <HOSTNAME>
 	 *	<MESSAGE> = <TAG> <LEVEL> <CONTENT>
@@ -213,7 +232,8 @@ clogging_fd_logmsg(const char *funcname, int linenum, enum LogLevel level,
 	 *		<CONTENT> = <FUNCTION/MODULE>: <APPLICATION_MESSAGE>
 	 */
 	/* leave the first two bytes for size */
-	len = snprintf(&g_fd_total_message[2], TOTAL_MSG_BYTES - 2,
+	len = snprintf(&g_fd_total_message[msg_offset],
+		       TOTAL_MSG_BYTES - msg_offset,
 		       "%s %s %s%s[%d] %s %s(%d): %s\n", time_str,
 		       g_fd_hostname, g_fd_progname, g_fd_threadname, g_fd_pid,
 		       level_str, funcname, linenum, msg);
@@ -224,9 +244,11 @@ clogging_fd_logmsg(const char *funcname, int linenum, enum LogLevel level,
 	}
 	/* Note that the null character at the end is not part of the len */
 	/* encode the length in big-endian format */
-	g_fd_total_message[0] = (len >> 8) & 0x00ff;
-	g_fd_total_message[1] = (len & 0x00ff);
-	bytes_sent = write(g_fd_fd, g_fd_total_message, len + 2);
+	if (g_fd_is_socket) {
+		g_fd_total_message[0] = (len >> 8) & 0x00ff;
+		g_fd_total_message[1] = (len & 0x00ff);
+	}
+	bytes_sent = write(g_fd_fd, g_fd_total_message, len + msg_offset);
 #if VERBOSE
 	if (bytes_sent < 0) {
 		int err = errno;
@@ -234,9 +256,10 @@ clogging_fd_logmsg(const char *funcname, int linenum, enum LogLevel level,
 		strerror_r(err, errmsg, sizeof(errmsg));
 		fprintf(stderr, "%s%s: write() failed, e=%d, errmsg=[%s]\n",
 			g_fd_progname, g_fd_threadname, err, errmsg);
-	} else if (bytes_sent != (len + 2)) {
+	} else if (bytes_sent != (len + msg_offset)) {
 		fprintf(stderr, "%s%s: could write only %d out of %d bytes\n",
-			g_fd_progname, g_fd_threadname, bytes_sent, len + 2);
+			g_fd_progname, g_fd_threadname, bytes_sent,
+			len + msg_offset);
 	} else {
 		fprintf(stderr, "%s%s: success\n",
 			g_fd_progname, g_fd_threadname);
