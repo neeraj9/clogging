@@ -43,7 +43,7 @@ CFLAGS+=" "
 #CFLAGS+=-D__FILENAME__='"$(subst $(SOURCE_PREFIX)/,,$(readlink -f $<))"'
 #CFLAGS+=-D__FILENAME__='"$(readlink -f $<)"'
 #CFLAGS+="-D__FILENAME__='\$(top_srcdir)/$<'"
-CFLAGS+=-D__FILENAME__='"\"`readlink -f $< | sed -e \"s|$(SOURCE_PREFIX)/|$(PACKAGE)/|\"`\""'
+CFLAGS+=-D__FILENAME__='"\"`readlink -f $< | sed -e \"s|$(SOURCE_PREFIX)/|$(PACKAGE)/|\"`@$(VERSION)\""'
 #CFLAGS+=-D__FILENAME__='"`readlink -f $< | sed -e \"s|$(SOURCE_PREFIX)/|$(PACKAGE)/|\"`"'
 CFLAGS+=" "
 
