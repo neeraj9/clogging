@@ -7,6 +7,9 @@ A logging library for c programming language. It adhers to
 [ISO C99](http://en.wikipedia.org/wiki/C99) C standard.
 
 > It is built with -std=gnu99.
+> It is built with dynamic TLS model in case you want to use the
+> shared library. Alternatively, you can statically link with
+> this library.
 
 ## Building
 
