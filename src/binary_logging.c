@@ -252,7 +252,7 @@ clogging_binary_logmsg(const char *filename, const char *funcname,
 		}
 	}
 
-	 /* <length> <endianness> <timestamp> <hostname> <progname>
+	 /* <length> <timestamp> <hostname> <progname>
 	  * <threadname> <pid> <loglevel> <file> <func> <linenum>
 	  * [<arg1>, <arg2>, ...] */
 
