@@ -59,6 +59,13 @@
 extern "C" {
 #endif
 
+enum VarArgType {
+	BINARY_LOG_VAR_ARG_INTEGER = 0,
+	BINARY_LOG_VAR_ARG_DOUBLE = 1,
+	BINARY_LOG_VAR_ARG_POINTER = 2,
+	BINARY_LOG_VAR_ARG_STRING = 3
+};
+
 /*
  * clogging_binary_init() should be called for each of the threads,
  * including the main thread.
@@ -94,10 +101,11 @@ enum LogLevel clogging_binary_get_loglevel(void);
  *
  * The output is in binary format as follows:
  *
- * <length> <timestamp> <hostname> <progname> <threadname> <pid> <loglevel>
- *   <file> <func> <linenum> [<arg1>, <arg2>, ...]
+ * <length> <timestamp> <hostname> <progname>
+ * <threadname> <pid> <loglevel> <file> <func> <linenum>
+ * [<arg1>, <arg2>, ...]
  *
- * Note: <length> is coded in big-endian in two bytes.
+ * Note: Multi-byte fields are encoded in big-endian format.
  *
  * It is a MT safe implementation.
  *

@@ -41,23 +41,42 @@
 /* ISO 8601 date and time format with sec */
 #define MAX_TIME_STR_LEN 26
 
-enum variable_arg_type {
-	VAR_ARG_INTEGER,
-	VAR_ARG_DOUBLE,
-	VAR_ARG_PTR,
-	VAR_ARG_STRING
-};
+#define MAX_NUM_VARIABLE_ARGS 20
 
 struct variable_arg {
+	enum VarArgType arg_type;
 	int bytes;
-	enum variable_arg_type arg_type;
 	union {
 		unsigned long long int llval;
 		long double ldbl;
-		char *s;
+		const char *s;
 		void *p;
 	};
 };
+
+int
+bigendian_to_native(const char *buf, int bytes, char *dst)
+{
+	int i = 0;
+	int is_little_endian = 0;
+
+	i = 1;
+	is_little_endian = (*((char *)&i)) & 0x00ff;
+	/* the input is in big-endian so convert
+	 * appropriately.
+	 */
+	if (is_little_endian) {
+		i = bytes - 1;
+		while (i >= 0) {
+			*dst = buf[i];
+			--i;
+			++dst;
+		}
+	} else {
+		memcpy(dst, buf, bytes);
+	}
+	return 0;
+}
 
 int
 read_nbytes(const char *buf, int bytes, unsigned long long int *llval)
@@ -194,8 +213,14 @@ int analyze_received_binary_message(const char *msg, const char *buf,
 	int bytes = 0;
 	int rc = 0;
 	int i = 0;
+	struct variable_arg args[MAX_NUM_VARIABLE_ARGS];
+	int is_little_endian = 0;
 
-	printf("received buf[%d] = [");
+	/* determine the endianness */
+	rc = 1;
+	is_little_endian = (*((char *)&rc)) & 0x00ff;
+
+	printf("received buf[%d] = [", buflen);
 	for (i = 0; i < buflen; ++i) {
 		printf("%02x, ", buf[i] & 0x00ff);
 	}
@@ -247,14 +272,60 @@ int analyze_received_binary_message(const char *msg, const char *buf,
 	linenum = (int)llval;
 	offset += bytes;
 
+	i = 0;
 	/* read variable arguments */
-	//while (offset < buflen) {
-	//	rc = read_length(buf, &offset, &bytes);
-	//	if ((bytes > 0) && (bytes <= sizeof(unsigned long long int))) {
-	//		rc = read_nbytes(&buf[offset], bytes, &llval);
-	//		offset += bytes;
-	//	}
-	//}
+	while (offset < buflen) {
+		/* variable type */
+		args[i].arg_type = (enum VarArgType) (buf[offset++] & 0x00ff);
+		rc = read_length(buf, &offset, &(args[i].bytes));
+		if (args[i].bytes <= 0) {
+			break;
+		}
+		if (args[i].arg_type == BINARY_LOG_VAR_ARG_INTEGER) {
+			rc = read_nbytes(&buf[offset], args[i].bytes,
+					 &(args[i].llval));
+			printf("[%d] detected %d bytes integer arg = %llu\n",
+			       i, args[i].bytes, args[i].llval);
+		} else if (args[i].arg_type == BINARY_LOG_VAR_ARG_DOUBLE) {
+			if (args[i].bytes == sizeof(long double)) {
+				bigendian_to_native(&buf[offset], args[i].bytes,
+						    (char *)&(args[i].ldbl));
+				printf("[%d] detected %d bytes long double arg = %Lg\n",
+				       i, args[i].bytes, args[i].ldbl);
+			} else {
+				/* cannot read directly into long double because
+				 * of memory architecture issues, so
+				 * read in the correct data type first (as raw)
+				 * and then type cast. Since the storage
+				 * type is of bigger storage, so there is
+				 * no issue.
+				 */
+				double dbl_val;
+				bigendian_to_native(&buf[offset], args[i].bytes,
+						    (char *)&dbl_val);
+				args[i].ldbl = dbl_val;
+				printf("[%d] detected %d bytes double arg = %g\n",
+				       i, args[i].bytes, dbl_val);
+			}
+		} else if (args[i].arg_type == BINARY_LOG_VAR_ARG_POINTER) {
+			bigendian_to_native(&buf[offset], args[i].bytes,
+					    (char *)&(args[i].p));
+			printf("[%d] detected %d bytes pointer arg = %p\n",
+			       i, args[i].bytes, args[i].p);
+		} else if (args[i].arg_type == BINARY_LOG_VAR_ARG_STRING) {
+			/* store the reference at present, so there
+			 * is no allocation, copy and free required.
+			 */
+			args[i].s = &buf[offset];
+			printf("[%d] detected %d bytes string arg = [%.*s]\n",
+			       i, args[i].bytes, args[i].bytes, args[i].s);
+		} else {
+			/* This is a bug! */
+			assert(0);
+		}
+		offset += args[i].bytes;
+		++i;
+	}
 
 	logtime = (time_t) timeval;
 	rc = time_to_cstr(&logtime, time_str, MAX_TIME_STR_LEN);
@@ -274,7 +345,7 @@ int analyze_received_binary_message(const char *msg, const char *buf,
 	return offset;
 }
 
-int main(int argc, char *argv[])
+int test_static_string(int argc, char *argv[])
 {
 	char pname[MAX_SIZE] = {0};
 	int serverfd = 0;
@@ -309,4 +380,60 @@ int main(int argc, char *argv[])
 	assert(BINARY_GET_LOG_LEVEL() == LOG_LEVEL_INFO);
 	assert(BINARY_GET_NUM_DROPPED_MESSAGES() == 0);
 	return 0;
+}
+
+int test_variable_arguments(int argc, char *argv[])
+{
+	char pname[MAX_SIZE] = {0};
+	int serverfd = 0;
+	int clientfd = 0;
+	int port = 21002;
+	int rc = 0;
+	int bytes_received = 0;
+	char buf[MAX_BUF_LEN];
+        struct sockaddr_in clientaddr;
+	/* variable arguments with format */
+	char format[] = "A fd debug log looks like this, int=%d, char=%c,"
+	     " uint=%u, longint=%ld, longlongint=%lld, unsignedlonglong=%llu,"
+	     " ptr=%p, str=%s";
+	int argint = 1;
+	char argchar = 2;
+	unsigned int arguint = 3;
+	long int arglongint = 4;
+	long long int arglonglongint = 5;
+	unsigned long long int argulonglongint = 6;
+	void *argptr = &argint;
+	char *argstr = format;
+
+	rc = prctl(PR_GET_NAME, (unsigned long)(pname), 0, 0, 0);
+	assert(rc == 0);
+
+	serverfd = create_udp_server(port);
+	clientfd = create_client_socket("127.0.0.1", port);
+
+	/* printf("pname = %s\n", pname); */
+	/* printf("argv[0] = %s\n", argv[0]); */
+	BINARY_INIT_LOGGING(pname, "", LOG_LEVEL_DEBUG, clientfd);
+	assert(BINARY_GET_LOG_LEVEL() == LOG_LEVEL_DEBUG);
+	BINARY_LOG_DEBUG(format, argint, argchar, arguint, arglongint,
+			 arglonglongint, argulonglongint, argptr, argstr);
+
+	bytes_received = receive_msg_from_client(serverfd, buf, MAX_BUF_LEN,
+						 &clientaddr);
+	printf("SENT: format sent size = %d\n", strlen(format));
+	printf("SENT: argptr = %p, argstr = [%s]\n", argptr, argstr);
+	printf("bytes_received = %d\n", bytes_received);
+
+	rc = analyze_received_binary_message(format, buf, bytes_received);
+
+	BINARY_SET_LOG_LEVEL(LOG_LEVEL_INFO);
+	assert(BINARY_GET_LOG_LEVEL() == LOG_LEVEL_INFO);
+	assert(BINARY_GET_NUM_DROPPED_MESSAGES() == 0);
+	return 0;
+}
+
+int main(int argc, char *argv[])
+{
+	return test_variable_arguments(argc, argv);
+	//return test_static_string(argc, argv);
 }

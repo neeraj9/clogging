@@ -21,7 +21,7 @@
 #include "config.h"
 #endif
 
-#include "fd_logging.h"
+#include "binary_logging.h"
 
 #include <stdio.h>		/* dprintf() and friends */
 #include <string.h>		/* strncpy(), strlen() */
@@ -90,7 +90,6 @@ enum length_specifier {
 
 #define PCOPY_DATA_TYPE(store, offsetptr, llval, bytes) \
 	PCOPY_DATA_TYPE_#bytes(store, offsetptr, llval)
-
 
 /* function prototypes */
 static int fill_variable_arguments(char *store, int offset, const char *format,
@@ -167,14 +166,14 @@ clogging_binary_init(const char *progname, const char *threadname,
 	(void)get_log_level_as_cstring(LOG_LEVEL_ERROR);
 
 	strncpy(g_binary_progname, progname, MAX_PROG_NAME_LEN);
-	g_binary_progname_length = strlen(g_binary_progname);
+	g_binary_progname_length = strlen(g_binary_progname) & 0x7fff;
 	strncpy(g_binary_threadname, threadname, MAX_PROG_NAME_LEN);
-	g_binary_threadname_length = strlen(g_binary_threadname);
+	g_binary_threadname_length = strlen(g_binary_threadname) & 0x7fff;
 	rc = gethostname(g_binary_hostname, MAX_HOSTNAME_LEN);
 	if (rc < 0) {
 		strncpy(g_binary_hostname, "unknown", MAX_HOSTNAME_LEN);
 	}
-	g_binary_hostname_length = strlen(g_binary_hostname);
+	g_binary_hostname_length = strlen(g_binary_hostname) & 0x7fff;
 	g_binary_pid = (int)getpid();
 	g_binary_level = level;
 	g_binary_fd = fd;
@@ -207,8 +206,8 @@ clogging_binary_logmsg(const char *filename, const char *funcname,
 	char *store = g_binary_previous_message;
 	int offset = 0;
 	ssize_t bytes_written = 0;
-	int filenamelen = strlen(filename);
-	int funcnamelen = strlen(funcname);
+	int filenamelen = strlen(filename) & 0x7fff;
+	int funcnamelen = strlen(funcname) & 0x7fff;
 
 	/* ignore logs which are filtered out */
 	if (level > g_binary_level) {
@@ -253,8 +252,9 @@ clogging_binary_logmsg(const char *filename, const char *funcname,
 		}
 	}
 
-	 /* <length> <timestamp> <hostname> <progname> <threadname> <pid>
-	  *   <loglevel> <file> <func> <linenum> [<arg1>, <arg2>, ...] */
+	 /* <length> <endianness> <timestamp> <hostname> <progname>
+	  * <threadname> <pid> <loglevel> <file> <func> <linenum>
+	  * [<arg1>, <arg2>, ...] */
 
 	/* first two bytes are used to store the overall length */
 	offset = 2;
@@ -275,15 +275,15 @@ clogging_binary_logmsg(const char *filename, const char *funcname,
 		++g_binary_num_msg_drops;
 		return;
 	}
-	store[offset++] = 0x00 | ((g_binary_hostname_length >> 8) & 0x00ff);
+	store[offset++] = 0x00 | ((g_binary_hostname_length >> 8) & 0x007f);
 	store[offset++] = g_binary_hostname_length & 0x00ff;
 	memcpy(&store[offset], g_binary_hostname, g_binary_hostname_length);
 	offset += g_binary_hostname_length;
-	store[offset++] = 0x00 | ((g_binary_progname_length >> 8) & 0x00ff);
+	store[offset++] = 0x00 | ((g_binary_progname_length >> 8) & 0x007f);
 	store[offset++] = g_binary_progname_length & 0x00ff;
 	memcpy(&store[offset], g_binary_progname, g_binary_progname_length);
 	offset += g_binary_progname_length;
-	store[offset++] = 0x00 | ((g_binary_threadname_length >> 8) & 0x00ff);
+	store[offset++] = 0x00 | ((g_binary_threadname_length >> 8) & 0x007f);
 	store[offset++] = g_binary_threadname_length & 0x00ff;
 	memcpy(&store[offset], g_binary_threadname, g_binary_threadname_length);
 	offset += g_binary_threadname_length;
@@ -292,11 +292,11 @@ clogging_binary_logmsg(const char *filename, const char *funcname,
 	store[offset++] = 0x80 | sizeof(g_binary_level);
 	rc = portable_copy(store, &offset, g_binary_level,
 			   sizeof(g_binary_level));
-	store[offset++] = 0x00 | ((filenamelen >> 8) & 0x00ff);
+	store[offset++] = 0x00 | ((filenamelen >> 8) & 0x007f);
 	store[offset++] = filenamelen & 0x00ff;
 	memcpy(&store[offset], filename, filenamelen);
 	offset += filenamelen;
-	store[offset++] = 0x00 | ((funcnamelen >> 8) & 0x00ff);
+	store[offset++] = 0x00 | ((funcnamelen >> 8) & 0x007f);
 	store[offset++] = funcnamelen & 0x00ff;
 	memcpy(&store[offset], funcname, funcnamelen);
 	offset += funcnamelen;
@@ -356,6 +356,13 @@ fill_variable_arguments(char *store, int offset, const char *format, va_list ap)
 	void *tmp_p = NULL;
 	int *tmp_n = NULL;
 	int rc = 0;
+	int i = 0;
+	char *tmp_d = NULL;
+	int is_little_endian = 0;
+
+	/* determine the endianness */
+	rc = 1;
+	is_little_endian = (*((char *)&rc)) & 0x00ff;
 
 	/* TODO FIXME cross validate that the format specifier
 	 * contains the same number of specifiers as the variable arguments.
@@ -380,6 +387,8 @@ fill_variable_arguments(char *store, int offset, const char *format, va_list ap)
 			/* need a cast here since va_arg only
 			takes fully promoted types */
 			llval = va_arg(ap, unsigned long long);
+			store[offset++] =
+				BINARY_LOG_VAR_ARG_INTEGER & 0x00ff;
 			if (lspecifier == LS_L) {
 				/* store the size in bytes before the value */
 				store[offset] = 0x80 | sizeof(int);
@@ -404,6 +413,8 @@ fill_variable_arguments(char *store, int offset, const char *format, va_list ap)
 		case 'd':
 		case 'i':	/* int */
 			llval = va_arg(ap, unsigned long long);
+			store[offset++] =
+				BINARY_LOG_VAR_ARG_INTEGER & 0x00ff;
 			if (lspecifier == LS_HH) {
 				/* store the size in bytes before the value */
 				store[offset] = 0x80 | 1;
@@ -477,22 +488,44 @@ fill_variable_arguments(char *store, int offset, const char *format, va_list ap)
 			 * | binary128|	Quadruple | 2    | 113    | −16382| +16383| 34.02    | 4931.77   |
 			 * +----------+-----------+------+--------+-------+-------+----------+-----------+
 			 * */
+			store[offset++] =
+				BINARY_LOG_VAR_ARG_DOUBLE & 0x00ff;
 			if (lspecifier == LS_CAP_L) {
 				ldbl = va_arg(ap, long double);
 				/* store the size in bytes before the value */
 				store[offset] = 0x80 | sizeof(long double);
 				++offset;
-				memcpy(&store[offset], &ldbl,
-				       sizeof(long double));
-				offset += sizeof(long double);
+				/* always store in big-endian format */
+				if (is_little_endian) {
+					tmp_d = (char *)&ldbl;
+					i = sizeof(long double) - 1;
+					while (i >= 0) {
+						store[offset++] = tmp_d[i] & 0x00ff;
+						--i;
+					}
+				} else {
+					memcpy(&store[offset], &dbl,
+					       sizeof(long double));
+					offset += sizeof(long double);
+				}
 			} else {
 				dbl = va_arg(ap, double);
 				/* store the size in bytes before the value */
 				store[offset] = 0x80 | sizeof(double);
 				++offset;
-				memcpy(&store[offset], &dbl,
-				       sizeof(double));
-				offset += sizeof(double);
+				/* always store in big-endian format */
+				if (is_little_endian) {
+					tmp_d = (char *)&ldbl;
+					i = sizeof(long double) - 1;
+					while (i >= 0) {
+						store[offset++] = tmp_d[i] & 0x00ff;
+						--i;
+					}
+				} else {
+					memcpy(&store[offset], &dbl,
+					       sizeof(double));
+					offset += sizeof(double);
+				}
 			}
 			is_type_specifier = 0;
 			lspecifier = LS_NONE;
@@ -506,6 +539,10 @@ fill_variable_arguments(char *store, int offset, const char *format, va_list ap)
 			 * complex to fix.
 			 */
 			tmp_s = va_arg(ap, char *);
+
+			store[offset++] =
+				BINARY_LOG_VAR_ARG_STRING & 0x00ff;
+
 			/* There is a chance that things can crash if the
 			 * string is not null terminated.
 			 * TODO FIXME add a mechanism to restict
@@ -518,9 +555,9 @@ fill_variable_arguments(char *store, int offset, const char *format, va_list ap)
 			 * value so should not matter but something
 			 * which should be documented.
 			 */
-			s_len = s_len & 0x007f;
-			store[offset] = 0x00 | s_len;
-			++offset;
+			s_len = s_len & 0x7fff; /* max len of 15 bits */
+			store[offset++] = 0x00 | ((s_len >> 8) & 0x7f);
+			store[offset++] = s_len & 0x00ff;
 			/* TODO FIXME validate whether the contents will
 			 * fit in the store. At present lets assume that
 			 * there is no issue with size and continue
@@ -534,6 +571,8 @@ fill_variable_arguments(char *store, int offset, const char *format, va_list ap)
 			break;
 		case 'p':	/* void* */
 			tmp_p = va_arg(ap, void *);
+			store[offset++] =
+				BINARY_LOG_VAR_ARG_POINTER & 0x00ff;
 			/* The idea is to print the address stored within
 			 * tmp_p for logging rather than access the
 			 * contents there.
@@ -541,8 +580,18 @@ fill_variable_arguments(char *store, int offset, const char *format, va_list ap)
 			/* store the size in bytes before the value */
 			store[offset] = 0x80 | sizeof(tmp_p);
 			++offset;
-			memcpy(&store[offset], &tmp_p, sizeof(tmp_p));
-			offset += sizeof(tmp_p);
+			/* always store in big-endian */
+			if (is_little_endian) {
+				tmp_d = (char *)&tmp_p;
+				i = sizeof(tmp_p) - 1;
+				while (i >= 0) {
+					store[offset++] = tmp_d[i] & 0x00ff;
+					--i;
+				}
+			} else {
+				memcpy(&store[offset], &tmp_p, sizeof(tmp_p));
+				offset += sizeof(tmp_p);
+			}
 			is_type_specifier = 0;
 			lspecifier = LS_NONE;
 			break;
@@ -555,6 +604,24 @@ fill_variable_arguments(char *store, int offset, const char *format, va_list ap)
 			*tmp_n = offset;
 			is_type_specifier = 0;
 			lspecifier = LS_NONE;
+			break;
+		case '.':	/* special case when precision is specified */
+			if (*(tmp+1) == '*') {
+				/* user supplied %.* which specifies
+				 * that width is specified as variable
+				 * argument.
+				 */
+				int width = va_arg(ap, int);
+				/* TODO FIXME, shouldn't we care. Maybe
+				 * later. Ideally we should be passing
+				 * that as with other variable arguments,
+				 * but lets not do it now.
+				 */
+				++tmp;
+				/* already preocessed within this
+				 * block
+				 */
+			}
 			break;
 		case '%':
 			/* no type specifier because user said %% */
