@@ -23,6 +23,7 @@
 
 #include "binary_logging.h"
 
+#include <endian.h>		/* __LITTLE_ENDIAN and friends */
 #include <stdio.h>		/* dprintf() and friends */
 #include <string.h>		/* strncpy(), strlen() */
 #include <sys/time.h>		/* gmtime_r() */
@@ -101,6 +102,8 @@ static int fill_variable_arguments(char *store, int offset, const char *format,
  *
  * This implementation stores multi-byte value in big-endian
  * format for portability.
+ *
+ * TODO FIXME: should we use htobe16(), htobe32() or htobe64() instead?
  */
 inline int
 portable_copy(char *store, int *offset, unsigned long long val,
@@ -358,11 +361,6 @@ fill_variable_arguments(char *store, int offset, const char *format, va_list ap)
 	int rc = 0;
 	int i = 0;
 	char *tmp_d = NULL;
-	int is_little_endian = 0;
-
-	/* determine the endianness */
-	rc = 1;
-	is_little_endian = (*((char *)&rc)) & 0x00ff;
 
 	/* TODO FIXME cross validate that the format specifier
 	 * contains the same number of specifiers as the variable arguments.
@@ -496,7 +494,7 @@ fill_variable_arguments(char *store, int offset, const char *format, va_list ap)
 				store[offset] = 0x80 | sizeof(long double);
 				++offset;
 				/* always store in big-endian format */
-				if (is_little_endian) {
+				if (__BYTE_ORDER == __LITTLE_ENDIAN) {
 					tmp_d = (char *)&ldbl;
 					i = sizeof(long double) - 1;
 					while (i >= 0) {
@@ -514,7 +512,7 @@ fill_variable_arguments(char *store, int offset, const char *format, va_list ap)
 				store[offset] = 0x80 | sizeof(double);
 				++offset;
 				/* always store in big-endian format */
-				if (is_little_endian) {
+				if (__BYTE_ORDER == __LITTLE_ENDIAN) {
 					tmp_d = (char *)&ldbl;
 					i = sizeof(long double) - 1;
 					while (i >= 0) {
@@ -581,7 +579,7 @@ fill_variable_arguments(char *store, int offset, const char *format, va_list ap)
 			store[offset] = 0x80 | sizeof(tmp_p);
 			++offset;
 			/* always store in big-endian */
-			if (is_little_endian) {
+			if (__BYTE_ORDER == __LITTLE_ENDIAN) {
 				tmp_d = (char *)&tmp_p;
 				i = sizeof(tmp_p) - 1;
 				while (i >= 0) {
