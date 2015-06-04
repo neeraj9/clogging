@@ -1,5 +1,5 @@
 [![Build Status](https://travis-ci.org/neeraj9/clogging.svg?branch=master)](https://travis-ci.org/neeraj9/clogging)
-[![Software License](https://img.shields.io/badge/license-LGPLv3-blue.svg?style=flat-square)](LICENSE.txt)
+[![Software License](https://img.shields.io/badge/license-LGPLv2.1-blue.svg?style=flat-square)](LICENSE.txt)
 
 # clogging
 
