@@ -1,7 +1,8 @@
+# clogging
+
 [![Build Status](https://travis-ci.org/neeraj9/clogging.svg?branch=master)](https://travis-ci.org/neeraj9/clogging)
 [![Software License](https://img.shields.io/badge/license-LGPLv2.1-blue.svg?style=flat-square)](LICENSE.txt)
 
-# clogging
 
 A logging library for c programming language. It adhers to
 [ISO C99](http://en.wikipedia.org/wiki/C99) C standard.
