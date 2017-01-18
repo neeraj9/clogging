@@ -9,4 +9,5 @@ Name: clogging
 Description: A c logging library
 Version: @VERSION@
 Libs: -L${libdir} -l${PACKAGE} ${LIBS}
+Libs.private: -L${libdir}/lib${PACKAGE}.a ${LIBS}
 Cflags: -I${includedir}
