@@ -21,7 +21,7 @@ following to get started.
 
     int main(int argc, char *argv[])
     {
-        clogging_basic_init(argv[0], 255, "", 0, LOG_LEVEL_DEBUG);
+        clogging_basic_init(argv[0], 255, "", 0, LOG_LEVEL_DEBUG, NULL);
         BASIC_LOG_DEBUG("A basic debug log looks like this");
         return 0;
     }
@@ -61,7 +61,7 @@ The main application code will now look like as follows:
     int main(int argc, char *argv[])
     {
         /* the second argument is the total size of the buffer including null byte */
-        clogging_basic_init(argv[0], 255, "", 0, LOG_LEVEL_DEBUG);
+        clogging_basic_init(argv[0], 255, "", 0, LOG_LEVEL_DEBUG, NULL);
         LOG_DEBUG("A basic debug log looks like this");
         return 0;
     }
