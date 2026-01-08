@@ -18,7 +18,6 @@ int main(void) {
   printf("========================\n\n");
 
   /* Initialize FD logging to write to stdout (file descriptor 1) */
-  clogging_handle_t stdout_handle;
   clogging_fd_init("fd_utf8_demo", 12 + 1, "", 0, LOG_LEVEL_INFO, clogging_create_handle_from_fd(1), NULL);
 
   /* Log ASCII text */
