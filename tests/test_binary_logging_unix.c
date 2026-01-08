@@ -95,7 +95,7 @@ int read_nbytes(const char *buf, int bytes, unsigned long long int *llval) {
   return 0;
 }
 
-inline int read_length(const char *buf, int *offset, int *bytes) {
+int read_length(const char *buf, int *offset, int *bytes) {
   int val1 = buf[*offset];
   if (val1 & 0x80) {
     (*offset) += 1;
