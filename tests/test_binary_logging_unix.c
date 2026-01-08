@@ -306,6 +306,10 @@ int analyze_received_binary_message(const char *msg, const char *buf,
 
   logtime = (time_t)timeval;
   rc = time_to_cstr(&logtime, time_str, MAX_TIME_STR_LEN);
+  if (rc < 0) {
+    snprintf(time_str, MAX_TIME_STR_LEN, "invalid-time");
+    return offset;
+  }
 
   printf("buflen = %d, offset = %d, msglen = %d\n", buflen, offset, msglen);
   printf("timestamp = %llu, time = %s\n", timeval, time_str);
@@ -320,6 +324,9 @@ int analyze_received_binary_message(const char *msg, const char *buf,
 }
 
 int test_static_string(int argc, char *argv[]) {
+  (void)argc;  /* unused parameter */
+  (void)argv;  /* unused parameter */
+
   char pname[MAX_SIZE] = {0};
   int serverfd = 0;
   int clientfd = 0;
@@ -344,7 +351,7 @@ int test_static_string(int argc, char *argv[]) {
 
   bytes_received =
       receive_msg_from_client(serverfd, buf, MAX_BUF_LEN, &clientaddr);
-  printf("msg sent size = %d\n", strlen(msg));
+  printf("msg sent size = %zd\n", strlen(msg));
   printf("bytes_received = %d\n", bytes_received);
 
   rc = analyze_received_binary_message(msg, buf, bytes_received);
@@ -356,6 +363,9 @@ int test_static_string(int argc, char *argv[]) {
 }
 
 int test_variable_arguments(int argc, char *argv[]) {
+  (void)argc;  /* unused parameter */
+  (void)argv;  /* unused parameter */
+
   char pname[MAX_SIZE] = {0};
   int serverfd = 0;
   int clientfd = 0;
@@ -393,7 +403,7 @@ int test_variable_arguments(int argc, char *argv[]) {
 
   bytes_received =
       receive_msg_from_client(serverfd, buf, MAX_BUF_LEN, &clientaddr);
-  printf("SENT: format sent size = %d\n", strlen(format));
+  printf("SENT: format sent size = %zd\n", strlen(format));
   printf("SENT: argptr = %p, argstr = [%s]\n", argptr, argstr);
   printf("bytes_received = %d\n", bytes_received);
 

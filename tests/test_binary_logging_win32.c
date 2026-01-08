@@ -304,6 +304,10 @@ int analyze_received_binary_message(const char *msg, const char *buf,
 
   logtime = (time_t)timeval;
   rc = time_to_cstr(&logtime, time_str, MAX_TIME_STR_LEN);
+  if (rc < 0) {
+    snprintf(time_str, MAX_TIME_STR_LEN, "invalid-time");
+    return offset;
+  }
 
   printf("buflen = %zd, offset = %d, msglen = %d\n", (size_t)buflen, offset, msglen);
   printf("timestamp = %llu, time = %s\n", timeval, time_str);

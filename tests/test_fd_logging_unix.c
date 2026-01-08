@@ -20,6 +20,9 @@
 #define MAX_SIZE 32
 
 int main(int argc, char *argv[]) {
+  (void)argc;  /* unused parameter */
+  (void)argv;  /* unused parameter */
+
   int fd = 1; /* fd for stdout */
   int rc = 0;
   char pname[MAX_SIZE] = {0};
