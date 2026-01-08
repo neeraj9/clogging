@@ -62,6 +62,9 @@ extern "C" {
  * the thread) for child threads. As an example the child thread can
  * call threadname = "-worker1" for worker1 or say
  * threadname = "-tcplistener" for a worker who listens for tcp connections.
+ * 
+ * progname is of maximum length of progname_len bytes including null terminator.
+ * threadname is of maximum length of threadname_len bytes including null terminator.
  */
 int clogging_basic_init(const char *progname, uint8_t progname_len,
                         const char *threadname, uint8_t threadname_len,

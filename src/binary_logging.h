@@ -82,6 +82,9 @@ enum VarArgType {
  * but then its possible that partial data is written to handle. This is
  * worse in some ways, so take your pick. Personally, I would risk the
  * non-blocking mode and handle partial writes at the receiver.
+ *
+ * progname is of maximum length of progname_len bytes including null terminator.
+ * threadname is of maximum length of threadname_len bytes including null terminator.
  */
 int clogging_binary_init(const char *progname, uint8_t progname_len,
                         const char *threadname, uint8_t threadname_len,
