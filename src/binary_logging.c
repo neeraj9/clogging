@@ -12,15 +12,37 @@
 
 #include "binary_logging.h"
 
+/* Handle endian.h for different platforms */
+#ifdef _WIN32
+/* Windows-specific definitions for endianness */
+#define __BYTE_ORDER __ORDER_LITTLE_ENDIAN__
+#define __ORDER_LITTLE_ENDIAN__ 1234
+#define __ORDER_BIG_ENDIAN__ 4321
+#define __LITTLE_ENDIAN __ORDER_LITTLE_ENDIAN__
+#define __BIG_ENDIAN __ORDER_BIG_ENDIAN__
+/* Windows doesn't have __thread, use thread_local from C11 */
+#define THREAD_LOCAL __declspec(thread)
+/* Windows doesn't have ssize_t, define it */
+#include <BaseTsd.h>
+typedef SSIZE_T ssize_t;
+/* Use the WIN32_LEAN_AND_MEAN macro before including windows.h. This tells the
+Windows header to exclude less commonly used APIs, including the old winsock.h:
+*/
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>  /* GetCurrentProcessId(), GetComputerNameExA() */
+#else
 #include <endian.h>   /* __LITTLE_ENDIAN and friends */
+#include <unistd.h> /* getpid(), gethostname(), write() */
+#define THREAD_LOCAL __thread
+#endif
+
 #include <stdarg.h>   /* va_start() and friends */
 #include <stddef.h>   /* ptrdiff_t */
 #include <stdio.h>    /* dprintf() and friends */
 #include <string.h>   /* strncpy(), strlen() */
-#include <sys/time.h> /* gmtime_r() */
 #include <sys/types.h>
 #include <time.h>   /* time() */
-#include <unistd.h> /* getpid(), gethostname(), write() */
+#include <sys/types.h>
 
 #define MAX_PROG_NAME_LEN 40
 #define MAX_HOSTNAME_LEN 20
@@ -40,31 +62,31 @@ extern "C" {
  * once.
  *
  */
-static __thread char g_binary_progname[MAX_PROG_NAME_LEN] = {0};
-static __thread int g_binary_progname_length = 0;
-static __thread char g_binary_threadname[MAX_PROG_NAME_LEN] = {0};
-static __thread int g_binary_threadname_length = 0;
-static __thread char g_binary_hostname[MAX_HOSTNAME_LEN] = {0};
-static __thread int g_binary_hostname_length = 0;
-static __thread int g_binary_pid = 0;
-static __thread enum LogLevel g_binary_level = DEFAULT_LOG_LEVEL;
-static __thread int g_binary_fd = 2; /* stderr fd is default as 2 */
+static THREAD_LOCAL char g_binary_progname[MAX_PROG_NAME_LEN] = {0};
+static THREAD_LOCAL int g_binary_progname_length = 0;
+static THREAD_LOCAL char g_binary_threadname[MAX_PROG_NAME_LEN] = {0};
+static THREAD_LOCAL int g_binary_threadname_length = 0;
+static THREAD_LOCAL char g_binary_hostname[MAX_HOSTNAME_LEN] = {0};
+static THREAD_LOCAL int g_binary_hostname_length = 0;
+static THREAD_LOCAL int g_binary_pid = 0;
+static THREAD_LOCAL enum LogLevel g_binary_level = DEFAULT_LOG_LEVEL;
+static THREAD_LOCAL int g_binary_fd = 2; /* stderr fd is default as 2 */
 /* safeguard calling init_logging multiple times */
-static __thread int g_binary_is_logging_initialized = 0;
+static THREAD_LOCAL int g_binary_is_logging_initialized = 0;
 
 #define TOTAL_MSG_BYTES 1024
 /* optimization by having only one instance per thread instead of
  * stack allocation all the time.
  */
 /* account for partial write */
-static __thread char g_binary_previous_message_offset = 0;
-static __thread char g_binary_previous_message_bytes = 0;
-static __thread char g_binary_previous_message[TOTAL_MSG_BYTES];
+static THREAD_LOCAL char g_binary_previous_message_offset = 0;
+static THREAD_LOCAL char g_binary_previous_message_bytes = 0;
+static THREAD_LOCAL char g_binary_previous_message[TOTAL_MSG_BYTES];
 
 /* store the number of message dropped as a counter for
  * later statistics collection.
  */
-static __thread uint64_t g_binary_num_msg_drops = 0;
+static THREAD_LOCAL uint64_t g_binary_num_msg_drops = 0;
 
 enum length_specifier {
   LS_NONE = 0,
@@ -156,12 +178,25 @@ int clogging_binary_init(const char *progname, const char *threadname,
   g_binary_progname_length = strlen(g_binary_progname) & 0x7fff;
   strncpy(g_binary_threadname, threadname, MAX_PROG_NAME_LEN);
   g_binary_threadname_length = strlen(g_binary_threadname) & 0x7fff;
+#ifdef _WIN32
+  {
+    DWORD size = MAX_HOSTNAME_LEN;
+    if (!GetComputerNameExA(ComputerNameDnsHostname, g_binary_hostname, &size)) {
+      strncpy(g_binary_hostname, "unknown", MAX_HOSTNAME_LEN);
+    }
+  }
+#else
   rc = gethostname(g_binary_hostname, MAX_HOSTNAME_LEN);
   if (rc < 0) {
-    strncpy(g_binary_hostname, "unknown", MAX_HOSTNAME_LEN);
+    strncpy(g_hostname, "unknown", MAX_HOSTNAME_LEN);
   }
+#endif
   g_binary_hostname_length = strlen(g_binary_hostname) & 0x7fff;
-  g_binary_pid = (int)getpid();
+  #ifdef _WIN32
+    g_binary_pid = (int)GetCurrentProcessId();
+  #else
+    g_binary_pid = (int)getpid();
+  #endif
   g_binary_level = level;
   g_binary_fd = fd;
 

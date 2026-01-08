@@ -19,6 +19,23 @@
 extern "C" {
 #endif
 
+#ifdef _WIN32
+#define THREAD_LOCAL __declspec(thread)
+/* Windows doesn't have gmtime_r, provide a wrapper */
+#ifndef HAVE_GMTIME_R
+static inline struct tm *gmtime_r(const time_t *timep, struct tm *result) {
+  struct tm *ret = gmtime(timep);
+  if (ret && result) {
+    *result = *ret;
+    return result;
+  }
+  return NULL;
+}
+#endif
+#else
+#define THREAD_LOCAL __thread
+#endif
+
 /*
  * Get the string representation of logging level.
  */
@@ -38,7 +55,7 @@ const char *get_log_level_as_cstring(enum LogLevel level) {
    * logging_common.h, so update this mapping table to
    * match that.
    */
-  static const __thread char *level_to_str[] = {
+  static const THREAD_LOCAL char *level_to_str[] = {
       "ERROR", /* 0 */
       "WARN",  /* 1 */
       "INFO",  /* 2 */

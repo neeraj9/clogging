@@ -6,10 +6,14 @@
  *  See LICENSE file for licensing information.
  */
 
+#ifdef _WIN32
+#error This file is for non-Windows platforms only
+#endif /* _WIN32 */
+
 #include "../src/fd_logging.h"
 
-#include <arpa/inet.h>  /* inet_aton(), htons() */
 #include <assert.h>     /* assert() */
+#include <arpa/inet.h>  /* inet_aton(), htons() */
 #include <fcntl.h>      /* fcntl() */
 #include <netinet/in.h> /* inet_in */
 #include <pthread.h>    /* pthread_create() and friends */
@@ -49,6 +53,7 @@ void *work(void *data) {
 
 int runall(const char *pname, int num_processes, int num_threads, int num_loops,
            int fd) {
+  /* POSIX implementation: use fork() and threads */
   long i;
   pid_t pid;
 
@@ -102,6 +107,7 @@ void start_dummy_udp_server(int port) {
   int bytes_received = 0;
 
   fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+  memset(&addr, 0, sizeof(struct sockaddr_in));
   addr.sin_family = AF_INET;
   addr.sin_port = htons(port);
   addr.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -121,6 +127,8 @@ void start_dummy_udp_server(int port) {
       break;
     }
   }
+
+  close(fd);
 }
 
 /*
@@ -146,6 +154,7 @@ int main(int argc, const char *argv[]) {
   int fd = 0;
   int flags = 0;
   int is_udp_testing = 0;
+  pid_t udp_server_pid;
 
   rc = prctl(PR_GET_NAME, (unsigned long)(pname), 0, 0, 0);
   assert(rc == 0);
@@ -157,7 +166,6 @@ int main(int argc, const char *argv[]) {
     fd = 1; /* out to stdout */
   } else {
     struct sockaddr_in addr;
-    pid_t udp_server_pid;
 
     is_udp_testing = 1;
 
@@ -185,17 +193,21 @@ int main(int argc, const char *argv[]) {
     /* else parent */
 
     fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    memset(&addr, 0, sizeof(struct sockaddr_in));
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port);
+
     rc = inet_aton(argv[4], &addr.sin_addr);
     if (rc < 0) {
       fprintf(stderr, "invalid IPv4 address ip = %s\n", argv[4]);
       return 3;
     }
+
     flags = fcntl(fd, F_GETFL, 0);
     assert(flags >= 0);
     rc = fcntl(fd, F_SETFL, flags | O_NONBLOCK);
     assert(rc >= 0);
+
     rc = connect(fd, (struct sockaddr *)&addr, sizeof(struct sockaddr_in));
     if (rc < 0) {
       fprintf(stderr,

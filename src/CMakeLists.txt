@@ -17,9 +17,14 @@ target_include_directories(clogging PUBLIC
 # Link against required libraries
 target_link_libraries(clogging PUBLIC Threads::Threads)
 
-# Link against rt library if available
+# Link against rt library if available (non-Windows)
 if(HAVE_RT_LIB)
     target_link_libraries(clogging PRIVATE rt)
+endif()
+
+# Link against Windows libraries if on Windows
+if(WIN32)
+    target_link_libraries(clogging PRIVATE ws2_32)
 endif()
 
 # Set version

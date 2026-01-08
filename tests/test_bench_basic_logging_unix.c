@@ -6,12 +6,17 @@
  *  See LICENSE file for licensing information.
  */
 
+#ifdef _WIN32
+#error This file is for non-Windows platforms only
+#endif /* _WIN32 */
+
 #include "../src/basic_logging.h"
 
 #include <assert.h>  /* assert() */
-#include <pthread.h> /* pthread_create() and friends */
 #include <stdio.h>
 #include <stdlib.h>    /* atoi(), malloc(), free() */
+#include <string.h>    /* memset() */
+#include <pthread.h>   /* pthread_create() and friends */
 #include <sys/prctl.h> /* prctl() */
 #include <sys/wait.h>  /* wait() */
 #include <unistd.h>    /* fork() */
@@ -42,6 +47,7 @@ void *work(void *data) {
 
 int runall(const char *pname, int num_processes, int num_threads,
            int num_loops) {
+  /* POSIX implementation: use fork() and threads */
   long i;
   pid_t pid;
 

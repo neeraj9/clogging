@@ -15,10 +15,18 @@
 #include <stdarg.h>   /* va_start() and friends */
 #include <stdio.h>    /* fprintf() and friends */
 #include <string.h>   /* strncpy() */
-#include <sys/time.h> /* gmtime_r() */
+#include <time.h>     /* time() */
+
+#ifdef _WIN32
+/* Use the WIN32_LEAN_AND_MEAN macro before including windows.h. This tells the
+Windows header to exclude less commonly used APIs, including the old winsock.h:
+*/
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>  /* GetCurrentProcessId(), GetComputerNameExA() */
+#else
 #include <sys/types.h>
-#include <time.h>   /* time() */
-#include <unistd.h> /* getpid(), gethostname() */
+#include <unistd.h>   /* getpid(), gethostname() */
+#endif
 
 #define MAX_PROG_NAME_LEN 40
 #define MAX_HOSTNAME_LEN 20
@@ -38,18 +46,24 @@ extern "C" {
  * once.
  *
  */
-static __thread char g_progname[MAX_PROG_NAME_LEN] = {0};
-static __thread char g_threadname[MAX_PROG_NAME_LEN] = {0};
-static __thread char g_hostname[MAX_HOSTNAME_LEN] = {0};
-static __thread int g_pid = 0;
-static __thread enum LogLevel g_level = DEFAULT_LOG_LEVEL;
+#ifdef _WIN32
+#define THREAD_LOCAL __declspec(thread)
+#else
+#define THREAD_LOCAL __thread
+#endif
+
+static THREAD_LOCAL char g_progname[MAX_PROG_NAME_LEN] = {0};
+static THREAD_LOCAL char g_threadname[MAX_PROG_NAME_LEN] = {0};
+static THREAD_LOCAL char g_hostname[MAX_HOSTNAME_LEN] = {0};
+static THREAD_LOCAL int g_pid = 0;
+static THREAD_LOCAL enum LogLevel g_level = DEFAULT_LOG_LEVEL;
 /* safeguard calling init_logging multiple times */
-static __thread int g_is_logging_initialized = 0;
+static THREAD_LOCAL int g_is_logging_initialized = 0;
 
 /* store the number of message dropped as a counter for
  * later statistics collection.
  */
-static __thread uint64_t g_basic_num_msg_drops = 0;
+static THREAD_LOCAL uint64_t g_basic_num_msg_drops = 0;
 
 int clogging_basic_init(const char *progname, const char *threadname,
                         enum LogLevel level) {
@@ -77,11 +91,24 @@ int clogging_basic_init(const char *progname, const char *threadname,
 
   strncpy(g_progname, progname, MAX_PROG_NAME_LEN);
   strncpy(g_threadname, threadname, MAX_PROG_NAME_LEN);
+#ifdef _WIN32
+  {
+    DWORD size = MAX_HOSTNAME_LEN;
+    if (!GetComputerNameExA(ComputerNameDnsHostname, g_hostname, &size)) {
+      strncpy(g_hostname, "unknown", MAX_HOSTNAME_LEN);
+    }
+  }
+#else
   rc = gethostname(g_hostname, MAX_HOSTNAME_LEN);
   if (rc < 0) {
     strncpy(g_hostname, "unknown", MAX_HOSTNAME_LEN);
   }
+#endif
+#ifdef _WIN32
+  g_pid = (int)GetCurrentProcessId();
+#else
   g_pid = (int)getpid();
+#endif
   g_level = level;
 
   return 0;
@@ -94,8 +121,10 @@ enum LogLevel clogging_basic_get_loglevel(void) { return g_level; }
 void clogging_basic_logmsg(const char *funcname, int linenum,
                            enum LogLevel level, const char *format, ...) {
   /* ISO 8601 date and time format with sec */
-  const int time_str_len = 26;
-  char time_str[time_str_len];
+#define TIME_STR_LEN 26
+  const int time_str_len = TIME_STR_LEN;
+  char time_str[TIME_STR_LEN];
+#undef TIME_STR_LEN
   time_t now;
   int len = 0;
   int rc = 0;

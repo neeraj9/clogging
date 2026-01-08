@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.10)
 project(clogging VERSION 0.1 LANGUAGES C)
 
 # Set C standard
-set(CMAKE_C_STANDARD 99)
+set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS ON)  # Enable gnu99 extensions
 
@@ -25,6 +25,16 @@ endif()
 # Check for optional libraries
 include(CheckLibraryExists)
 check_library_exists(rt gmtime_r "time.h" HAVE_RT_LIB)
+
+# Check for gmtime_r on the current system
+include(CheckSymbolExists)
+set(CMAKE_REQUIRED_DEFINITIONS_SAVE ${CMAKE_REQUIRED_DEFINITIONS})
+# set(CMAKE_REQUIRED_DEFINITIONS "${CMAKE_REQUIRED_DEFINITIONS} -D_POSIX_C_SOURCE=200809L")
+check_symbol_exists(gmtime_r "time.h" HAVE_GMTIME_R)
+set(CMAKE_REQUIRED_DEFINITIONS ${CMAKE_REQUIRED_DEFINITIONS_SAVE})
+if(HAVE_GMTIME_R)
+    add_compile_definitions(HAVE_GMTIME_R)
+endif()
 
 # Set compile flags (compiler-specific)
 if(MSVC)

@@ -6,6 +6,10 @@
  *  See LICENSE file for licensing information.
  */
 
+#ifdef _WIN32
+#error This file is for non-Windows platforms only
+#endif /* _WIN32 */
+
 #include "../src/fd_logging.h"
 
 #include <assert.h>

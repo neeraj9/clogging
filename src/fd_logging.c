@@ -17,10 +17,29 @@
 #include <stdio.h>    /* fprintf() and friends */
 #include <string.h>   /* strncpy(), strerror_r() */
 #include <sys/stat.h> /* fstat() */
-#include <sys/time.h> /* gmtime_r() */
 #include <sys/types.h>
 #include <time.h>   /* time() */
-#include <unistd.h> /* getpid(), gethostname(), write() */
+
+#ifdef _WIN32
+/* Windows doesn't have ssize_t, define it */
+#include <BaseTsd.h>
+typedef SSIZE_T ssize_t;
+#include <winsock2.h> /* getsockname() for socket detection */
+#endif /* _WIN32 */
+
+#ifdef _WIN32
+/* Use the WIN32_LEAN_AND_MEAN macro before including windows.h. This tells the
+Windows header to exclude less commonly used APIs, including the old winsock.h.
+If we dont do this, we may get redefinition errors for types like AF_IPX, because
+we are using winsock2.h above.
+*/
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>  /* GetCurrentProcessId(), GetComputerNameExA() */
+#else
+#include <sys/types.h>
+#include <sys/socket.h> /* getsockname() */
+#include <unistd.h>   /* getpid(), gethostname() */
+#endif
 
 #define MAX_PROG_NAME_LEN 40
 #define MAX_HOSTNAME_LEN 20
@@ -40,32 +59,38 @@ extern "C" {
  * once.
  *
  */
-static __thread char g_fd_progname[MAX_PROG_NAME_LEN] = {0};
-static __thread char g_fd_threadname[MAX_PROG_NAME_LEN] = {0};
-static __thread char g_fd_hostname[MAX_HOSTNAME_LEN] = {0};
-static __thread int g_fd_pid = 0;
-static __thread enum LogLevel g_fd_level = DEFAULT_LOG_LEVEL;
-static __thread int g_fd_fd = 2;            /* stderr fd is default as 2 */
-static __thread int g_fd_prefix_length = 0; /* 1 when prefix length to log
+#ifdef _WIN32
+#define THREAD_LOCAL __declspec(thread)
+#else
+#define THREAD_LOCAL __thread
+#endif
+
+static THREAD_LOCAL char g_fd_progname[MAX_PROG_NAME_LEN] = {0};
+static THREAD_LOCAL char g_fd_threadname[MAX_PROG_NAME_LEN] = {0};
+static THREAD_LOCAL char g_fd_hostname[MAX_HOSTNAME_LEN] = {0};
+static THREAD_LOCAL int g_fd_pid = 0;
+static THREAD_LOCAL enum LogLevel g_fd_level = DEFAULT_LOG_LEVEL;
+static THREAD_LOCAL int g_fd_fd = 2;            /* stderr fd is default as 2 */
+static THREAD_LOCAL int g_fd_prefix_length = 0; /* 1 when prefix length to log
                                                entry */
 /* safeguard calling init_logging multiple times */
-static __thread int g_fd_is_logging_initialized = 0;
+static THREAD_LOCAL int g_fd_is_logging_initialized = 0;
 
 #define TOTAL_MSG_BYTES 1024
 /* optimization by having only one instance per thread instead of
  * stack allocation all the time.
  */
-static __thread char g_fd_total_message[TOTAL_MSG_BYTES];
+static THREAD_LOCAL char g_fd_total_message[TOTAL_MSG_BYTES];
 
 /* account for partial write */
-static __thread char g_fd_previous_message_offset = 0;
-static __thread char g_fd_previous_message_bytes = 0;
-static __thread char g_fd_previous_message[TOTAL_MSG_BYTES];
+static THREAD_LOCAL char g_fd_previous_message_offset = 0;
+static THREAD_LOCAL char g_fd_previous_message_bytes = 0;
+static THREAD_LOCAL char g_fd_previous_message[TOTAL_MSG_BYTES];
 
 /* store the number of message dropped as a counter for
  * later statistics collection.
  */
-static __thread uint64_t g_fd_num_msg_drops = 0;
+static THREAD_LOCAL uint64_t g_fd_num_msg_drops = 0;
 
 int clogging_fd_init(const char *progname, const char *threadname,
                      enum LogLevel level, int fd) {
@@ -93,15 +118,48 @@ int clogging_fd_init(const char *progname, const char *threadname,
 
   strncpy(g_fd_progname, progname, MAX_PROG_NAME_LEN);
   strncpy(g_fd_threadname, threadname, MAX_PROG_NAME_LEN);
+#ifdef _WIN32
+  {
+    DWORD size = MAX_HOSTNAME_LEN;
+    if (!GetComputerNameExA(ComputerNameDnsHostname, g_fd_hostname, &size)) {
+      strncpy(g_fd_hostname, "unknown", MAX_HOSTNAME_LEN);
+    }
+  }
+#else
   rc = gethostname(g_fd_hostname, MAX_HOSTNAME_LEN);
   if (rc < 0) {
     strncpy(g_fd_hostname, "unknown", MAX_HOSTNAME_LEN);
   }
+#endif
+#ifdef _WIN32
+  g_fd_pid = (int)GetCurrentProcessId();
+#else
   g_fd_pid = (int)getpid();
+#endif
   g_fd_level = level;
   g_fd_fd = fd;
 
   /* determine the type of fd */
+#ifdef _WIN32
+  {
+    HANDLE handle = (HANDLE)_get_osfhandle(fd);
+    if (handle != INVALID_HANDLE_VALUE) {
+      DWORD type = GetFileType(handle);
+      /* prefix length for pipes and named pipes (FIFOs on Windows) */
+      if (type == FILE_TYPE_PIPE) {
+        g_fd_prefix_length = 1;
+      }
+    }
+    if (g_fd_prefix_length == 0) {
+      /* Check if it's a socket */
+      struct sockaddr addr;
+      int addrlen = sizeof(addr);
+      if (getsockname(fd, &addr, &addrlen) == 0) {
+        g_fd_prefix_length = 1;
+      }
+    }
+  }
+#else
   {
     struct stat statbuf;
     fstat(fd, &statbuf);
@@ -112,6 +170,7 @@ int clogging_fd_init(const char *progname, const char *threadname,
       g_fd_prefix_length = 1;
     }
   }
+#endif
 
   return 0;
 }
@@ -123,8 +182,10 @@ enum LogLevel clogging_fd_get_loglevel(void) { return g_fd_level; }
 void clogging_fd_logmsg(const char *funcname, int linenum, enum LogLevel level,
                         const char *format, ...) {
   /* ISO 8601 date and time format with sec */
-  const int time_str_len = 26;
-  char time_str[time_str_len];
+#define TIME_STR_LEN 26
+  const int time_str_len = TIME_STR_LEN;
+  char time_str[TIME_STR_LEN];
+#undef TIME_STR_LEN
   time_t now;
   int remaining_bytes = 0;
   int len = 0;

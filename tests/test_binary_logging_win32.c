@@ -6,23 +6,31 @@
  *  See LICENSE file for licensing information.
  */
 
+#ifndef _WIN32
+#error This file is for Windows platforms only
+#endif /* !_WIN32 */
+
 #include "../src/binary_logging.h"
 #include "../src/logging_common.h" /* time_to_cstr() */
 
-#ifndef __FILENAME__
-#error __FILENAME__ not defined
+#ifndef __FILE__
+#error __FILE__ not defined
 #endif
 
-#include <arpa/inet.h> /* inet_aton(), htons() */
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>    /* Windows API */
+#include <winsock2.h>   /* socket(), connect(), etc. */
+#include <ws2tcpip.h>   /* inet_pton(), etc. */
+#pragma comment(lib, "ws2_32.lib")
+
 #include <assert.h>    /* assert() */
-#include <fcntl.h>     /* fcntl() */
 #include <stdio.h>
 #include <string.h>     /* strlen() */
-#include <sys/prctl.h>  /* prctl() */
-#include <sys/socket.h> /* socket(), connect() */
 #include <time.h>       /* time_t */
 
-/* as per man prctl(2) the size should be at least 16 bytes */
+typedef int socklen_t;
+
+/* maximum size for process name */
 #define MAX_SIZE 32
 
 #define MAX_BUF_LEN 1024
@@ -104,11 +112,10 @@ inline int read_length(const char *buf, int *offset, int *bytes) {
 }
 
 /* create udp server and return the socket fd */
-int create_udp_server(int port) {
+SOCKET create_udp_server(int port) {
   struct sockaddr_in addr;
-  int fd = 0;
+  SOCKET fd = INVALID_SOCKET;
   int rc = 0;
-  int flags = 0;
 
   fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
   addr.sin_family = AF_INET;
@@ -117,16 +124,11 @@ int create_udp_server(int port) {
   rc = bind(fd, (struct sockaddr *)&addr, sizeof(struct sockaddr_in));
   assert(rc == 0);
 
-  flags = fcntl(fd, F_GETFL, 0);
-  assert(flags >= 0);
-  rc = fcntl(fd, F_SETFL, flags | O_NONBLOCK);
-  assert(rc >= 0);
-
   return fd;
 }
 
 /* receive message from the client */
-int receive_msg_from_client(int fd, char *buf, int buflen,
+int receive_msg_from_client(SOCKET fd, char *buf, int buflen,
                             struct sockaddr_in *clientaddr) {
   socklen_t clientaddr_len = sizeof(struct sockaddr_in);
   int bytes_received = 0;
@@ -136,31 +138,26 @@ int receive_msg_from_client(int fd, char *buf, int buflen,
   return bytes_received;
 }
 
-int create_client_socket(const char *ip, int port) {
+SOCKET create_client_socket(const char *ip, int port) {
   struct sockaddr_in addr;
-  int fd = 0;
-  int flags = 0;
+  SOCKET fd = INVALID_SOCKET;
   int rc = 0;
 
   fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
   addr.sin_family = AF_INET;
   addr.sin_port = htons(port);
-  rc = inet_aton(ip, &addr.sin_addr);
-  if (rc < 0) {
+  rc = inet_pton(AF_INET, ip, &addr.sin_addr.s_addr);
+  if (rc <= 0) {
     fprintf(stderr, "invalid IPv4 address ip = %s\n", ip);
-    return -1;
+    return INVALID_SOCKET;
   }
-  flags = fcntl(fd, F_GETFL, 0);
-  assert(flags >= 0);
-  rc = fcntl(fd, F_SETFL, flags | O_NONBLOCK);
-  assert(rc >= 0);
   rc = connect(fd, (struct sockaddr *)&addr, sizeof(struct sockaddr_in));
   if (rc < 0) {
     fprintf(stderr,
             "cannot connect to ip = %s, port ="
             "%d\n",
             ip, port);
-    return -1;
+    return INVALID_SOCKET;
   }
   return fd;
 }
@@ -317,24 +314,32 @@ int analyze_received_binary_message(const char *msg, const char *buf,
 
 int test_static_string(int argc, char *argv[]) {
   char pname[MAX_SIZE] = {0};
-  int serverfd = 0;
-  int clientfd = 0;
+  SOCKET serverfd = INVALID_SOCKET;
+  SOCKET clientfd = INVALID_SOCKET;
   int port = 21002;
   int rc = 0;
   int bytes_received = 0;
   char buf[MAX_BUF_LEN];
   char msg[] = "A fd debug log looks like this";
   struct sockaddr_in clientaddr;
+  WSADATA wsa_data;
 
-  rc = prctl(PR_GET_NAME, (unsigned long)(pname), 0, 0, 0);
-  assert(rc == 0);
+  /* Windows: use program name or default */
+  strncpy(pname, "test_binary_logging", MAX_SIZE - 1);
+
+  /* Initialize Winsock */
+  rc = WSAStartup(MAKEWORD(2, 2), &wsa_data);
+  if (rc != 0) {
+    fprintf(stderr, "WSAStartup() failed\n");
+    return 1;
+  }
 
   serverfd = create_udp_server(port);
   clientfd = create_client_socket("127.0.0.1", port);
 
   /* printf("pname = %s\n", pname); */
   /* printf("argv[0] = %s\n", argv[0]); */
-  BINARY_INIT_LOGGING(pname, "", LOG_LEVEL_DEBUG, clientfd);
+  BINARY_INIT_LOGGING(pname, "", LOG_LEVEL_DEBUG, (int)clientfd);
   assert(BINARY_GET_LOG_LEVEL() == LOG_LEVEL_DEBUG);
   BINARY_LOG_DEBUG(msg);
 
@@ -348,18 +353,23 @@ int test_static_string(int argc, char *argv[]) {
   BINARY_SET_LOG_LEVEL(LOG_LEVEL_INFO);
   assert(BINARY_GET_LOG_LEVEL() == LOG_LEVEL_INFO);
   assert(BINARY_GET_NUM_DROPPED_MESSAGES() == 0);
+
+  closesocket(serverfd);
+  closesocket(clientfd);
+  WSACleanup();
   return 0;
 }
 
 int test_variable_arguments(int argc, char *argv[]) {
   char pname[MAX_SIZE] = {0};
-  int serverfd = 0;
-  int clientfd = 0;
+  SOCKET serverfd = INVALID_SOCKET;
+  SOCKET clientfd = INVALID_SOCKET;
   int port = 21002;
   int rc = 0;
   int bytes_received = 0;
   char buf[MAX_BUF_LEN];
   struct sockaddr_in clientaddr;
+  WSADATA wsa_data;
   /* variable arguments with format */
   char format[] =
       "A fd debug log looks like this, int=%d, char=%c,"
@@ -374,15 +384,22 @@ int test_variable_arguments(int argc, char *argv[]) {
   void *argptr = &argint;
   char *argstr = format;
 
-  rc = prctl(PR_GET_NAME, (unsigned long)(pname), 0, 0, 0);
-  assert(rc == 0);
+  /* Windows: use program name or default */
+  strncpy(pname, "test_binary_logging", MAX_SIZE - 1);
+
+  /* Initialize Winsock */
+  rc = WSAStartup(MAKEWORD(2, 2), &wsa_data);
+  if (rc != 0) {
+    fprintf(stderr, "WSAStartup() failed\n");
+    return 1;
+  }
 
   serverfd = create_udp_server(port);
   clientfd = create_client_socket("127.0.0.1", port);
 
   /* printf("pname = %s\n", pname); */
   /* printf("argv[0] = %s\n", argv[0]); */
-  BINARY_INIT_LOGGING(pname, "", LOG_LEVEL_DEBUG, clientfd);
+  BINARY_INIT_LOGGING(pname, "", LOG_LEVEL_DEBUG, (int)clientfd);
   assert(BINARY_GET_LOG_LEVEL() == LOG_LEVEL_DEBUG);
   BINARY_LOG_DEBUG(format, argint, argchar, arguint, arglongint, arglonglongint,
                    argulonglongint, argptr, argstr);
@@ -398,6 +415,10 @@ int test_variable_arguments(int argc, char *argv[]) {
   BINARY_SET_LOG_LEVEL(LOG_LEVEL_INFO);
   assert(BINARY_GET_LOG_LEVEL() == LOG_LEVEL_INFO);
   assert(BINARY_GET_NUM_DROPPED_MESSAGES() == 0);
+
+  closesocket(serverfd);
+  closesocket(clientfd);
+  WSACleanup();
   return 0;
 }
 
