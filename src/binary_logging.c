@@ -12,14 +12,47 @@
 
 #include "binary_logging.h"
 
-/* Handle endian.h for different platforms */
+/* Cross-platform endianness detection */
+#if defined(__BYTE_ORDER__) && defined(__ORDER_LITTLE_ENDIAN__) && defined(__ORDER_BIG_ENDIAN__)
+  /* GCC/Clang style - most reliable */
+  #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+    #define IS_LITTLE_ENDIAN 1
+    #define IS_BIG_ENDIAN 0
+  #elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+    #define IS_LITTLE_ENDIAN 0
+    #define IS_BIG_ENDIAN 1
+  #else
+    #error "Unknown byte order"
+  #endif
+#elif defined(_WIN32) || defined(_WIN64)
+  /* Windows x86/x64 is always little-endian */
+  #define IS_LITTLE_ENDIAN 1
+  #define IS_BIG_ENDIAN 0
+#elif defined(__LITTLE_ENDIAN__) || defined(__ARMEL__) || defined(__THUMBEL__) || \
+      defined(__AARCH64EL__) || defined(_MIPSEL) || defined(__MIPSEL)
+  #define IS_LITTLE_ENDIAN 1
+  #define IS_BIG_ENDIAN 0
+#elif defined(__BIG_ENDIAN__) || defined(__ARMEB__) || defined(__THUMBEB__) || \
+      defined(__AARCH64EB__) || defined(_MIPSEB) || defined(__MIPSEB)
+  #define IS_LITTLE_ENDIAN 0
+  #define IS_BIG_ENDIAN 1
+#elif defined(__BYTE_ORDER) && defined(__LITTLE_ENDIAN) && defined(__BIG_ENDIAN)
+  /* Fallback to POSIX endian.h macros */
+  #if __BYTE_ORDER == __LITTLE_ENDIAN
+    #define IS_LITTLE_ENDIAN 1
+    #define IS_BIG_ENDIAN 0
+  #elif __BYTE_ORDER == __BIG_ENDIAN
+    #define IS_LITTLE_ENDIAN 0
+    #define IS_BIG_ENDIAN 1
+  #else
+    #error "Unknown byte order"
+  #endif
+#else
+  #error "Cannot detect byte order on this platform"
+#endif
+
+/* Handle platform-specific headers and definitions */
 #ifdef _WIN32
-/* Windows-specific definitions for endianness */
-#define __BYTE_ORDER __ORDER_LITTLE_ENDIAN__
-#define __ORDER_LITTLE_ENDIAN__ 1234
-#define __ORDER_BIG_ENDIAN__ 4321
-#define __LITTLE_ENDIAN __ORDER_LITTLE_ENDIAN__
-#define __BIG_ENDIAN __ORDER_BIG_ENDIAN__
 /* Windows doesn't have __thread, use thread_local from C11 */
 #define THREAD_LOCAL __declspec(thread)
 /* Windows doesn't have ssize_t, define it */
@@ -492,34 +525,34 @@ static ssize_t fill_variable_arguments(char *store, ssize_t offset, const char *
         store[offset] = 0x80 | sizeof(long double);
         ++offset;
         /* always store in big-endian format */
-        if (__BYTE_ORDER == __LITTLE_ENDIAN) {
-          tmp_d = (char *)&ldbl;
-          i = sizeof(long double) - 1;
-          while (i >= 0) {
-            store[offset++] = tmp_d[i] & 0x00ff;
-            --i;
-          }
-        } else {
-          memcpy(&store[offset], &dbl, sizeof(long double));
-          offset += sizeof(long double);
+#if IS_LITTLE_ENDIAN
+        tmp_d = (char *)&ldbl;
+        i = sizeof(long double) - 1;
+        while (i >= 0) {
+          store[offset++] = tmp_d[i] & 0x00ff;
+          --i;
         }
+#else /* ?IS_LITTLE_ENDIAN */
+        memcpy(&store[offset], &ldbl, sizeof(long double));
+        offset += sizeof(long double);
+#endif /* IS_LITTLE_ENDIAN */
       } else {
         dbl = va_arg(ap, double);
         /* store the size in bytes before the value */
         store[offset] = 0x80 | sizeof(double);
         ++offset;
         /* always store in big-endian format */
-        if (__BYTE_ORDER == __LITTLE_ENDIAN) {
-          tmp_d = (char *)&ldbl;
-          i = sizeof(long double) - 1;
-          while (i >= 0) {
-            store[offset++] = tmp_d[i] & 0x00ff;
-            --i;
-          }
-        } else {
-          memcpy(&store[offset], &dbl, sizeof(double));
-          offset += sizeof(double);
+#if IS_LITTLE_ENDIAN
+        tmp_d = (char *)&dbl;
+        i = sizeof(double) - 1;
+        while (i >= 0) {
+          store[offset++] = tmp_d[i] & 0x00ff;
+          --i;
         }
+#else /* ?IS_LITTLE_ENDIAN */
+        memcpy(&store[offset], &dbl, sizeof(double));
+        offset += sizeof(double);
+#endif /* IS_LITTLE_ENDIAN */
       }
       is_type_specifier = 0;
       lspecifier = LS_NONE;
@@ -573,17 +606,17 @@ static ssize_t fill_variable_arguments(char *store, ssize_t offset, const char *
       store[offset] = 0x80 | sizeof(tmp_p);
       ++offset;
       /* always store in big-endian */
-      if (__BYTE_ORDER == __LITTLE_ENDIAN) {
-        tmp_d = (char *)&tmp_p;
-        i = sizeof(tmp_p) - 1;
-        while (i >= 0) {
-          store[offset++] = tmp_d[i] & 0x00ff;
-          --i;
-        }
-      } else {
-        memcpy(&store[offset], &tmp_p, sizeof(tmp_p));
-        offset += sizeof(tmp_p);
+#if IS_LITTLE_ENDIAN
+      tmp_d = (char *)&tmp_p;
+      i = sizeof(tmp_p) - 1;
+      while (i >= 0) {
+        store[offset++] = tmp_d[i] & 0x00ff;
+        --i;
       }
+#else /* ?IS_LITTLE_ENDIAN */
+      memcpy(&store[offset], &tmp_p, sizeof(tmp_p));
+      offset += sizeof(tmp_p);
+#endif /* IS_LITTLE_ENDIAN */
       is_type_specifier = 0;
       lspecifier = LS_NONE;
       break;
