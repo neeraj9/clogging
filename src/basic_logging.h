@@ -25,7 +25,7 @@
  * but validation and conversion utilities won't be available.
  */
 
-#define BASIC_INIT_LOGGING(pn, pnlen, tn, tnlen, level)                                      \
+#define BASIC_INIT_LOGGING(pn, pnlen, tn, tnlen, level)                        \
   clogging_basic_init((pn), (pnlen), (tn), (tnlen), (level))
 #define BASIC_SET_LOG_LEVEL(level) clogging_basic_set_loglevel(level)
 #define BASIC_GET_LOG_LEVEL() clogging_basic_get_loglevel()

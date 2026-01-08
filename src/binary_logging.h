@@ -25,7 +25,7 @@
  * but validation and conversion utilities won't be available.
  */
 
-#define BINARY_INIT_LOGGING(pn, pnlen, tn, tnlen, level, fd)                                 \
+#define BINARY_INIT_LOGGING(pn, pnlen, tn, tnlen, level, fd)                   \
   clogging_binary_init((pn), (pnlen), (tn), (tnlen), (level), (fd))
 #define BINARY_SET_LOG_LEVEL(level) clogging_binary_set_loglevel(level)
 #define BINARY_GET_LOG_LEVEL() clogging_binary_get_loglevel()

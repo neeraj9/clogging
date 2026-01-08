@@ -25,7 +25,7 @@
  * but validation and conversion utilities won't be available.
  */
 
-#define FD_INIT_LOGGING(pn, pnlen, tn, tnlen, level, fd)                                     \
+#define FD_INIT_LOGGING(pn, pnlen, tn, tnlen, level, fd)                       \
   clogging_fd_init((pn), (pnlen), (tn), (tnlen), (level), (fd))
 #define FD_SET_LOG_LEVEL(level) clogging_fd_set_loglevel(level)
 #define FD_GET_LOG_LEVEL() clogging_fd_get_loglevel()
