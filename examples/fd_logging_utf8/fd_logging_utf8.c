@@ -24,7 +24,7 @@ int main(void) {
 #else
   stdout_handle = 1;
 #endif
-  FD_INIT_LOGGING("fd_utf8_demo", 12 + 1, "", 0, LOG_LEVEL_INFO, stdout_handle, NULL);
+  clogging_fd_init("fd_utf8_demo", 12 + 1, "", 0, LOG_LEVEL_INFO, stdout_handle, NULL);
 
   /* Log ASCII text */
   LOG_INFO("Hello World!");

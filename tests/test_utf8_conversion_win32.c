@@ -142,7 +142,7 @@ void test_logging_with_windows_api(void) {
   printf("Test: Logging with Windows API strings\n");
 
   /* Initialize logging with UTF-8 support */
-  BASIC_INIT_LOGGING("utf8_demo", 9 + 1, "", 0, LOG_LEVEL_DEBUG, NULL);
+  clogging_basic_init("utf8_demo", 9 + 1, "", 0, LOG_LEVEL_DEBUG, NULL);
   clogging_init_utf8_console();
 
   /* Get Windows username (UTF-16 from Windows API) */

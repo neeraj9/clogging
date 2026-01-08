@@ -23,6 +23,24 @@ Windows header to exclude less commonly used APIs, including the old winsock.h.
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>   /* CreateThread(), WaitForMultipleObjects() */
 
+/* Lets follow the ISO C standard of 1999 and use ## __VA_ARGS__ so as
+ * to avoid the neccessity of providing even a single argument after
+ * format. That is its possible that the user did not provide any
+ * variable arguments and the format is the entier message.
+ */
+#define LOG_ERROR(format, ...)                                           \
+  clogging_basic_logmsg(__func__, __LINE__, LOG_LEVEL_ERROR, format,     \
+                        ##__VA_ARGS__)
+#define LOG_WARN(format, ...)                                            \
+  clogging_basic_logmsg(__func__, __LINE__, LOG_LEVEL_WARN, format,      \
+                        ##__VA_ARGS__)
+#define LOG_INFO(format, ...)                                            \
+  clogging_basic_logmsg(__func__, __LINE__, LOG_LEVEL_INFO, format,      \
+                        ##__VA_ARGS__)
+#define LOG_DEBUG(format, ...)                                           \
+  clogging_basic_logmsg(__func__, __LINE__, LOG_LEVEL_DEBUG, format,     \
+                        ##__VA_ARGS__)
+
 #define MAX_THREADS 100000
 #define MAX_THREADNAME_SIZE 20
 #define MAX_PROCESSNAME_SIZE 32 /* must be at least 16 */
@@ -45,10 +63,10 @@ DWORD WINAPI work(LPVOID data) {
   int threadname_len = snprintf(threadname, MAX_THREADNAME_SIZE, "thread-%d", ctx->threadindex);
   assert(threadname_len > 0 && threadname_len < MAX_THREADNAME_SIZE);
 
-  BASIC_INIT_LOGGING(ctx->processname, ctx->processname_len, threadname, (uint8_t)threadname_len, LOG_LEVEL_INFO, NULL);
+  clogging_basic_init(ctx->processname, ctx->processname_len, threadname, (uint8_t)threadname_len, LOG_LEVEL_INFO, NULL);
 
   for (i = 0; i < ctx->num_loops; ++i) {
-    BASIC_LOG_INFO("Some log which gets printed to console.");
+    LOG_INFO("Some log which gets printed to console.");
   }
   return 0;
 }
@@ -61,10 +79,10 @@ int runall(const char *pname, uint8_t pname_len, int num_processes, int num_thre
   struct context *thread_contexts =
       (struct context *)malloc(sizeof(struct context) * num_threads);
 
-  BASIC_INIT_LOGGING(pname, pname_len, "", 0, LOG_LEVEL_DEBUG, NULL);
+  clogging_basic_init(pname, pname_len, "", 0, LOG_LEVEL_DEBUG, NULL);
 
-  BASIC_LOG_INFO("Benchmarking starts");
-  BASIC_LOG_INFO("pname = %s, np = %d, nt = %d, nl = %d\n", pname,
+  LOG_INFO("Benchmarking starts");
+  LOG_INFO("pname = %s, np = %d, nt = %d, nl = %d\n", pname,
                  num_processes, num_threads, num_loops);
 
   for (j = 0; j < num_threads; j++) {
@@ -74,7 +92,7 @@ int runall(const char *pname, uint8_t pname_len, int num_processes, int num_thre
     thread_handles[j] = CreateThread(NULL, 0, work, (void *)&thread_contexts[j],
                                      0, NULL);
     if (thread_handles[j] == NULL) {
-      BASIC_LOG_ERROR("CreateThread() failed");
+      LOG_ERROR("CreateThread() failed");
     }
   }
 
@@ -85,7 +103,7 @@ int runall(const char *pname, uint8_t pname_len, int num_processes, int num_thre
 
   free(thread_contexts);
   free(thread_handles);
-  BASIC_LOG_INFO("Test complete");
+  LOG_INFO("Test complete");
 
   return 0;
 }

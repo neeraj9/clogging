@@ -114,9 +114,9 @@ int test_static_string(int argc, char *argv[]) {
 
   /* printf("pname = %s\n", pname); */
   /* printf("argv[0] = %s\n", argv[0]); */
-  BINARY_INIT_LOGGING(pname, MAX_SIZE, "", 0, LOG_LEVEL_DEBUG, clogging_create_handle_from_fd(clientfd));
-  assert(BINARY_GET_LOG_LEVEL() == LOG_LEVEL_DEBUG);
-  BINARY_LOG_DEBUG(format);
+  clogging_binary_init(pname, MAX_SIZE, "", 0, LOG_LEVEL_DEBUG, clogging_create_handle_from_fd(clientfd));
+  assert(GET_LOG_LEVEL() == LOG_LEVEL_DEBUG);
+  LOG_DEBUG(format);
 
   bytes_received =
       receive_msg_from_client(serverfd, buf, MAX_BUF_LEN, &clientaddr);
@@ -125,9 +125,9 @@ int test_static_string(int argc, char *argv[]) {
 
   rc = analyze_received_binary_message(format, buf, bytes_received);
 
-  BINARY_SET_LOG_LEVEL(LOG_LEVEL_INFO);
-  assert(BINARY_GET_LOG_LEVEL() == LOG_LEVEL_INFO);
-  assert(BINARY_GET_NUM_DROPPED_MESSAGES() == 0);
+  SET_LOG_LEVEL(LOG_LEVEL_INFO);
+  assert(GET_LOG_LEVEL() == LOG_LEVEL_INFO);
+  assert(GET_NUM_DROPPED_MESSAGES() == 0);
   return 0;
 }
 
@@ -165,9 +165,9 @@ int test_variable_arguments(int argc, char *argv[]) {
 
   /* printf("pname = %s\n", pname); */
   /* printf("argv[0] = %s\n", argv[0]); */
-  BINARY_INIT_LOGGING(pname, MAX_SIZE, "", 0, LOG_LEVEL_DEBUG, clogging_create_handle_from_fd(clientfd));
-  assert(BINARY_GET_LOG_LEVEL() == LOG_LEVEL_DEBUG);
-  BINARY_LOG_DEBUG(format, argint, argchar, arguint, arglongint, arglonglongint,
+  clogging_binary_init(pname, MAX_SIZE, "", 0, LOG_LEVEL_DEBUG, clogging_create_handle_from_fd(clientfd));
+  assert(GET_LOG_LEVEL() == LOG_LEVEL_DEBUG);
+  LOG_DEBUG(format, argint, argchar, arguint, arglongint, arglonglongint,
                    argulonglongint, argptr, argstr);
 
   bytes_received =
@@ -178,9 +178,9 @@ int test_variable_arguments(int argc, char *argv[]) {
 
   rc = analyze_received_binary_message(format, buf, bytes_received);
 
-  BINARY_SET_LOG_LEVEL(LOG_LEVEL_INFO);
-  assert(BINARY_GET_LOG_LEVEL() == LOG_LEVEL_INFO);
-  assert(BINARY_GET_NUM_DROPPED_MESSAGES() == 0);
+  SET_LOG_LEVEL(LOG_LEVEL_INFO);
+  assert(GET_LOG_LEVEL() == LOG_LEVEL_INFO);
+  assert(GET_NUM_DROPPED_MESSAGES() == 0);
   return 0;
 }
 

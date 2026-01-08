@@ -18,6 +18,24 @@
 
 #define MAX_NUM_VARIABLE_ARGS 20
 
+/* Lets follow the ISO C standard of 1999 and use ## __VA_ARGS__ so as
+ * to avoid the neccessity of providing even a single argument after
+ * format. That is its possible that the user did not provide any
+ * variable arguments and the format is the entier message.
+ */
+#define LOG_ERROR(format, ...)                                           \
+  clogging_binary_logmsg(__FILE__, __func__, __LINE__, LOG_LEVEL_ERROR, format,    \
+                        ##__VA_ARGS__)
+#define LOG_WARN(format, ...)                                            \
+  clogging_binary_logmsg(__FILE__, __func__, __LINE__, LOG_LEVEL_WARN, format,     \
+                        ##__VA_ARGS__)
+#define LOG_INFO(format, ...)                                            \
+  clogging_binary_logmsg(__FILE__, __func__, __LINE__, LOG_LEVEL_INFO, format,     \
+                        ##__VA_ARGS__)
+#define LOG_DEBUG(format, ...)                                           \
+  clogging_binary_logmsg(__FILE__, __func__, __LINE__, LOG_LEVEL_DEBUG, format,    \
+                        ##__VA_ARGS__)
+
 struct variable_arg {
   enum VarArgType arg_type;
   int bytes;

@@ -16,7 +16,7 @@ int main(void) {
   printf("Testing UTF-8 logging support...\n\n");
 
   /* Initialize basic logging with UTF-8 strings */
-  assert(BASIC_INIT_LOGGING("utf8_demo", 9 + 1, "", 0, LOG_LEVEL_DEBUG, NULL) == 0);
+  assert(clogging_basic_init("utf8_demo", 9 + 1, "", 0, LOG_LEVEL_DEBUG, NULL) == 0);
 
   /* Test 1: ASCII logging (should work everywhere) */
   printf("Test 1: ASCII logging\n");

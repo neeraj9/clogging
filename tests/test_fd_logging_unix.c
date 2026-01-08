@@ -19,6 +19,21 @@
 /* as per man prctl(2) the size should be at least 16 bytes */
 #define MAX_SIZE 32
 
+/* Lets follow the ISO C standard of 1999 and use ## __VA_ARGS__ so as
+ * to avoid the neccessity of providing even a single argument after
+ * format. That is its possible that the user did not provide any
+ * variable arguments and the format is the entier message.
+ */
+#define LOG_ERROR(format, ...)                                           \
+  clogging_fd_logmsg(__func__, __LINE__, LOG_LEVEL_ERROR, format,     \
+                        ##__VA_ARGS__)
+#define LOG_WARN(format, ...)                                            \
+  clogging_fd_logmsg(__func__, __LINE__, LOG_LEVEL_WARN, format,      \
+                        ##__VA_ARGS__)
+#define LOG_INFO(format, ...)                                            \
+  clogging_fd_logmsg(__func__, __LINE__, LOG_LEVEL_INFO, format,      \
+                        ##__VA_ARGS__)
+
 int main(int argc, char *argv[]) {
   (void)argc;  /* unused parameter */
   (void)argv;  /* unused parameter */
@@ -31,11 +46,11 @@ int main(int argc, char *argv[]) {
   assert(rc == 0);
   /* printf("pname = %s\n", pname); */
   /* printf("argv[0] = %s\n", argv[0]); */
-  FD_INIT_LOGGING(pname, MAX_SIZE, "", 0, LOG_LEVEL_DEBUG, clogging_create_handle_from_fd(fd), NULL);
-  FD_LOG_DEBUG("A fd debug log looks like this");
-  assert(FD_GET_LOG_LEVEL() == LOG_LEVEL_DEBUG);
-  FD_SET_LOG_LEVEL(LOG_LEVEL_INFO);
-  assert(FD_GET_LOG_LEVEL() == LOG_LEVEL_INFO);
-  assert(FD_GET_NUM_DROPPED_MESSAGES() == 0);
+  clogging_fd_init(pname, MAX_SIZE, "", 0, LOG_LEVEL_DEBUG, clogging_create_handle_from_fd(fd), NULL);
+  LOG_DEBUG("A fd debug log looks like this");
+  assert(GET_LOG_LEVEL() == LOG_LEVEL_DEBUG);
+  SET_LOG_LEVEL(LOG_LEVEL_INFO);
+  assert(GET_LOG_LEVEL() == LOG_LEVEL_INFO);
+  assert(GET_NUM_DROPPED_MESSAGES() == 0);
   return 0;
 }

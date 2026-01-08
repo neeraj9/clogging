@@ -9,12 +9,35 @@
 
 #include <stdio.h>
 
+#define SET_LOG_LEVEL(level) clogging_basic_set_loglevel(level)
+#define GET_LOG_LEVEL() clogging_basic_get_loglevel()
+#define GET_NUM_DROPPED_MESSAGES()                                       \
+  clogging_basic_get_num_dropped_messages()
+
+/* Lets follow the ISO C standard of 1999 and use ## __VA_ARGS__ so as
+ * to avoid the neccessity of providing even a single argument after
+ * format. That is its possible that the user did not provide any
+ * variable arguments and the format is the entier message.
+ */
+#define LOG_ERROR(format, ...)                                           \
+  clogging_basic_logmsg(__func__, __LINE__, LOG_LEVEL_ERROR, format,     \
+                        ##__VA_ARGS__)
+#define LOG_WARN(format, ...)                                            \
+  clogging_basic_logmsg(__func__, __LINE__, LOG_LEVEL_WARN, format,      \
+                        ##__VA_ARGS__)
+#define LOG_INFO(format, ...)                                            \
+  clogging_basic_logmsg(__func__, __LINE__, LOG_LEVEL_INFO, format,      \
+                        ##__VA_ARGS__)
+#define LOG_DEBUG(format, ...)                                           \
+  clogging_basic_logmsg(__func__, __LINE__, LOG_LEVEL_DEBUG, format,     \
+                        ##__VA_ARGS__)
+
 int main(void) {
   printf("UTF-8 Logging Example\n");
   printf("====================\n\n");
 
   /* Initialize logging with UTF-8 support enabled */
-  BASIC_INIT_LOGGING("utf8_demo", 9 + 1, "", 0, LOG_LEVEL_INFO, NULL);
+  clogging_basic_init("utf8_demo", 9 + 1, "", 0, LOG_LEVEL_INFO, NULL);
 
   /* Log ASCII text */
   LOG_INFO("Hello World!");

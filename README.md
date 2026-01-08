@@ -21,7 +21,7 @@ following to get started.
 
     int main(int argc, char *argv[])
     {
-        BASIC_INIT_LOGGING(argv[0], 255, "", 0, LOG_LEVEL_DEBUG);
+        clogging_basic_init(argv[0], 255, "", 0, LOG_LEVEL_DEBUG);
         BASIC_LOG_DEBUG("A basic debug log looks like this");
         return 0;
     }
@@ -61,7 +61,7 @@ The main application code will now look like as follows:
     int main(int argc, char *argv[])
     {
         /* the second argument is the total size of the buffer including null byte */
-        BASIC_INIT_LOGGING(argv[0], 255, "", 0, LOG_LEVEL_DEBUG);
+        clogging_basic_init(argv[0], 255, "", 0, LOG_LEVEL_DEBUG);
         LOG_DEBUG("A basic debug log looks like this");
         return 0;
     }
@@ -155,7 +155,7 @@ All string parameters to logging functions should be UTF-8 encoded:
 
 int main(void) {
     /* the second argument is the total size of the buffer including null byte */
-    BASIC_INIT_LOGGING("myapp", 5 + 1, "", 0, LOG_LEVEL_INFO, NULL);
+    clogging_basic_init("myapp", 5 + 1, "", 0, LOG_LEVEL_INFO, NULL);
     
     // ASCII works everywhere
     LOG_INFO("Hello World!");
@@ -183,7 +183,7 @@ int main(void) {
     clogging_init_utf8_console();
     
     /* the second argument is the total size of the buffer including null byte */
-    BASIC_INIT_LOGGING("myapp", 5 + 1, "", 0, LOG_LEVEL_INFO, NULL);
+    clogging_basic_init("myapp", 5 + 1, "", 0, LOG_LEVEL_INFO, NULL);
     
     // Get Windows username (UTF-16)
     wchar_t wide_username[256];

@@ -25,38 +25,6 @@
  * but validation and conversion utilities won't be available.
  */
 
-#define BINARY_INIT_LOGGING(pn, pnlen, tn, tnlen, level, fd)                   \
-  clogging_binary_init((pn), (pnlen), (tn), (tnlen), (level), (fd))
-#define BINARY_SET_LOG_LEVEL(level) clogging_binary_set_loglevel(level)
-#define BINARY_GET_LOG_LEVEL() clogging_binary_get_loglevel()
-#define BINARY_GET_NUM_DROPPED_MESSAGES()                                      \
-  clogging_binary_get_num_dropped_messages()
-
-#ifdef __FILENAME__
-#define NCF_ __FILENAME__
-#else
-#define NCF_ __FILE__
-#endif
-
-/* Lets follow the ISO C standard of 1999 and use ## __VA_ARGS__ so as
- * to avoid the neccessity of providing even a single argument after
- * format. That is its possible that the user did not provide any
- * variable arguments and the format is the entier message.
- */
-
-#define BINARY_LOG_ERROR(format, ...)                                          \
-  clogging_binary_logmsg(NCF_, __func__, __LINE__, LOG_LEVEL_ERROR, format,    \
-                         ##__VA_ARGS__)
-#define BINARY_LOG_WARN(format, ...)                                           \
-  clogging_binary_logmsg(NCF_, __func__, __LINE__, LOG_LEVEL_WARN, format,     \
-                         ##__VA_ARGS__)
-#define BINARY_LOG_INFO(format, ...)                                           \
-  clogging_binary_logmsg(NCF_, __func__, __LINE__, LOG_LEVEL_INFO, format,     \
-                         ##__VA_ARGS__)
-#define BINARY_LOG_DEBUG(format, ...)                                          \
-  clogging_binary_logmsg(NCF_, __func__, __LINE__, LOG_LEVEL_DEBUG, format,    \
-                         ##__VA_ARGS__)
-
 #ifdef __cplusplus
 extern "C" {
 #endif

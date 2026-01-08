@@ -25,6 +25,24 @@
 #include <sys/wait.h>   /* wait() */
 #include <unistd.h>     /* fork() */
 
+ /* Lets follow the ISO C standard of 1999 and use ## __VA_ARGS__ so as
+ * to avoid the neccessity of providing even a single argument after
+ * format. That is its possible that the user did not provide any
+ * variable arguments and the format is the entier message.
+ */
+#define LOG_ERROR(format, ...)                                        \
+  clogging_fd_logmsg(__func__, __LINE__, LOG_LEVEL_ERROR, format,     \
+                        ##__VA_ARGS__)
+#define LOG_WARN(format, ...)                                         \
+  clogging_fd_logmsg(__func__, __LINE__, LOG_LEVEL_WARN, format,      \
+                        ##__VA_ARGS__)
+#define LOG_INFO(format, ...)                                         \
+  clogging_fd_logmsg(__func__, __LINE__, LOG_LEVEL_INFO, format,      \
+                        ##__VA_ARGS__)
+#define LOG_DEBUG(format, ...)                                        \
+  clogging_fd_logmsg(__func__, __LINE__, LOG_LEVEL_DEBUG, format,     \
+                        ##__VA_ARGS__)
+
 #define MAX_BUF_SIZE 4096
 #define MAX_THREADS 100000
 #define MAX_THREADNAME_SIZE 20
@@ -44,10 +62,10 @@ void *work(void *data) {
   char threadname[MAX_THREADNAME_SIZE];
   int threadname_len = snprintf(threadname, MAX_THREADNAME_SIZE, "thread-%d", ctx->threadindex);
 
-  FD_INIT_LOGGING(ctx->processname, ctx->processname_len, threadname, threadname_len, LOG_LEVEL_INFO, clogging_create_handle_from_fd(ctx->fd), NULL);
+  clogging_fd_init(ctx->processname, ctx->processname_len, threadname, threadname_len, LOG_LEVEL_INFO, clogging_create_handle_from_fd(ctx->fd), NULL);
 
   for (i = 0; i < ctx->num_loops; ++i) {
-    FD_LOG_INFO("Some log which gets printed to console.");
+    LOG_INFO("Some log which gets printed to console.");
   }
   return 0;
 }
@@ -58,16 +76,16 @@ int runall(const char *pname, uint8_t processname_len, int num_processes, int nu
   long i;
   pid_t pid;
 
-  FD_INIT_LOGGING(pname, processname_len, "", 0, LOG_LEVEL_DEBUG, clogging_create_handle_from_fd(fd), NULL);
+  clogging_fd_init(pname, processname_len, "", 0, LOG_LEVEL_DEBUG, clogging_create_handle_from_fd(fd), NULL);
 
-  FD_LOG_INFO("Benchmarking starts");
-  FD_LOG_INFO("pname = %s, np = %d, nt = %d, nl = %d\n", pname, num_processes,
+  LOG_INFO("Benchmarking starts");
+  LOG_INFO("pname = %s, np = %d, nt = %d, nl = %d\n", pname, num_processes,
               num_threads, num_loops);
 
   for (i = 0; i < num_processes; i++) {
     pid = fork();
     if (pid < 0) {
-      FD_LOG_ERROR("fork() failed");
+      LOG_ERROR("fork() failed");
     } else if (pid == 0) {
       /* within child process */
       pthread_t tids[num_threads];
@@ -94,7 +112,7 @@ int runall(const char *pname, uint8_t processname_len, int num_processes, int nu
   for (i = 0; i < num_processes; i++) {
     pid = wait(NULL);
   }
-  FD_LOG_INFO("Test complete");
+  LOG_INFO("Test complete");
 
   return 0;
 }
