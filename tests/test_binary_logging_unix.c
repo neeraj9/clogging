@@ -115,7 +115,7 @@ int test_static_string(int argc, char *argv[]) {
   /* printf("pname = %s\n", pname); */
   /* printf("argv[0] = %s\n", argv[0]); */
   clogging_binary_init(pname, MAX_SIZE, "", 0, LOG_LEVEL_DEBUG, clogging_create_handle_from_fd(clientfd));
-  assert(GET_LOG_LEVEL() == LOG_LEVEL_DEBUG);
+  assert(clogging_binary_get_loglevel() == LOG_LEVEL_DEBUG);
   LOG_DEBUG(format);
 
   bytes_received =
@@ -125,9 +125,9 @@ int test_static_string(int argc, char *argv[]) {
 
   rc = analyze_received_binary_message(format, buf, bytes_received);
 
-  SET_LOG_LEVEL(LOG_LEVEL_INFO);
-  assert(GET_LOG_LEVEL() == LOG_LEVEL_INFO);
-  assert(GET_NUM_DROPPED_MESSAGES() == 0);
+  clogging_binary_set_loglevel(LOG_LEVEL_INFO);
+  assert(clogging_binary_get_loglevel() == LOG_LEVEL_INFO);
+  assert(clogging_binary_get_num_dropped_messages() == 0);
   return 0;
 }
 
@@ -166,7 +166,7 @@ int test_variable_arguments(int argc, char *argv[]) {
   /* printf("pname = %s\n", pname); */
   /* printf("argv[0] = %s\n", argv[0]); */
   clogging_binary_init(pname, MAX_SIZE, "", 0, LOG_LEVEL_DEBUG, clogging_create_handle_from_fd(clientfd));
-  assert(GET_LOG_LEVEL() == LOG_LEVEL_DEBUG);
+  assert(clogging_binary_get_loglevel() == LOG_LEVEL_DEBUG);
   LOG_DEBUG(format, argint, argchar, arguint, arglongint, arglonglongint,
                    argulonglongint, argptr, argstr);
 
@@ -178,9 +178,9 @@ int test_variable_arguments(int argc, char *argv[]) {
 
   rc = analyze_received_binary_message(format, buf, bytes_received);
 
-  SET_LOG_LEVEL(LOG_LEVEL_INFO);
-  assert(GET_LOG_LEVEL() == LOG_LEVEL_INFO);
-  assert(GET_NUM_DROPPED_MESSAGES() == 0);
+  clogging_binary_set_loglevel(LOG_LEVEL_INFO);
+  assert(clogging_binary_get_loglevel() == LOG_LEVEL_INFO);
+  assert(clogging_binary_get_num_dropped_messages() == 0);
   return 0;
 }
 

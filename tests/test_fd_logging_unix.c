@@ -24,14 +24,17 @@
  * format. That is its possible that the user did not provide any
  * variable arguments and the format is the entier message.
  */
-#define LOG_ERROR(format, ...)                                           \
-  clogging_fd_logmsg(__func__, __LINE__, LOG_LEVEL_ERROR, format,     \
+#define LOG_ERROR(format, ...)                                         \
+  clogging_fd_logmsg(__func__, __LINE__, LOG_LEVEL_ERROR, format,      \
                         ##__VA_ARGS__)
-#define LOG_WARN(format, ...)                                            \
-  clogging_fd_logmsg(__func__, __LINE__, LOG_LEVEL_WARN, format,      \
+#define LOG_WARN(format, ...)                                          \
+  clogging_fd_logmsg(__func__, __LINE__, LOG_LEVEL_WARN, format,       \
                         ##__VA_ARGS__)
-#define LOG_INFO(format, ...)                                            \
-  clogging_fd_logmsg(__func__, __LINE__, LOG_LEVEL_INFO, format,      \
+#define LOG_INFO(format, ...)                                          \
+  clogging_fd_logmsg(__func__, __LINE__, LOG_LEVEL_INFO, format,       \
+                        ##__VA_ARGS__)
+#define LOG_DEBUG(format, ...)                                         \
+  clogging_fd_logmsg(__func__, __LINE__, LOG_LEVEL_DEBUG, format,      \
                         ##__VA_ARGS__)
 
 int main(int argc, char *argv[]) {
@@ -48,9 +51,9 @@ int main(int argc, char *argv[]) {
   /* printf("argv[0] = %s\n", argv[0]); */
   clogging_fd_init(pname, MAX_SIZE, "", 0, LOG_LEVEL_DEBUG, clogging_create_handle_from_fd(fd), NULL);
   LOG_DEBUG("A fd debug log looks like this");
-  assert(GET_LOG_LEVEL() == LOG_LEVEL_DEBUG);
-  SET_LOG_LEVEL(LOG_LEVEL_INFO);
-  assert(GET_LOG_LEVEL() == LOG_LEVEL_INFO);
-  assert(GET_NUM_DROPPED_MESSAGES() == 0);
+  assert(clogging_fd_get_loglevel() == LOG_LEVEL_DEBUG);
+  clogging_fd_set_loglevel(LOG_LEVEL_INFO);
+  assert(clogging_fd_get_loglevel() == LOG_LEVEL_INFO);
+  assert(clogging_fd_get_num_dropped_messages() == 0);
   return 0;
 }
