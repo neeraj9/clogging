@@ -65,9 +65,11 @@ int clogging_utf8_validate(const char *str, size_t len) {
   while (i < len) {
     unsigned char byte = (unsigned char)str[i];
     
-    /* Check for embedded null byte (invalid in UTF-8 when length is explicit) */
+    /* Application-level restriction: treat embedded null (0x00) as invalid,
+     * even though it is a valid UTF-8 code unit. This avoids accepting strings
+     * with internal terminators when validating explicitly-sized buffers.
+     */
     if (byte == 0x00) {
-      /* If we have an explicit length and haven't reached it, null byte in middle is invalid */
       return 0;
     }
     
