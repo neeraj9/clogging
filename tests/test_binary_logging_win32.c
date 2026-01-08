@@ -34,12 +34,6 @@ typedef int socklen_t;
 
 #define MAX_BUF_LEN 1024
 
-
-
-int bigendian_to_native(const char *buf, int bytes, char *dst);
-int read_nbytes(const char *buf, int bytes, unsigned long long int *llval);
-inline int read_length(const char *buf, int *offset, int *bytes);
-
 /* create udp server and return the socket fd */
 SOCKET create_udp_server(int port) {
   struct sockaddr_in addr;
@@ -94,9 +88,6 @@ SOCKET create_client_socket(const char *ip, int port) {
   }
   return fd;
 }
-
-int analyze_received_binary_message(const char *format, const char *buf,
-                                    int buflen);
 
 int test_static_string(int argc, char *argv[]) {
   (void)argc;  /* unused parameter */
