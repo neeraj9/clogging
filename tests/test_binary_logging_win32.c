@@ -117,9 +117,11 @@ SOCKET create_udp_server(int port) {
   SOCKET fd = INVALID_SOCKET;
   int rc = 0;
 
+  assert(port > 0 && port < 65536);
+
   fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
   addr.sin_family = AF_INET;
-  addr.sin_port = htons(port);
+  addr.sin_port = htons((u_short)port);
   addr.sin_addr.s_addr = htonl(INADDR_ANY);
   rc = bind(fd, (struct sockaddr *)&addr, sizeof(struct sockaddr_in));
   assert(rc == 0);
@@ -143,9 +145,11 @@ SOCKET create_client_socket(const char *ip, int port) {
   SOCKET fd = INVALID_SOCKET;
   int rc = 0;
 
+  assert(port > 0 && port < 65536);
+
   fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
   addr.sin_family = AF_INET;
-  addr.sin_port = htons(port);
+  addr.sin_port = htons((u_short)port);
   rc = inet_pton(AF_INET, ip, &addr.sin_addr.s_addr);
   if (rc <= 0) {
     fprintf(stderr, "invalid IPv4 address ip = %s\n", ip);
@@ -164,6 +168,7 @@ SOCKET create_client_socket(const char *ip, int port) {
 
 int analyze_received_binary_message(const char *msg, const char *buf,
                                     int buflen) {
+  (void)msg;  /* unused parameter */
   int msglen = 0;
   time_t logtime;
   char time_str[MAX_TIME_STR_LEN];
@@ -300,7 +305,7 @@ int analyze_received_binary_message(const char *msg, const char *buf,
   logtime = (time_t)timeval;
   rc = time_to_cstr(&logtime, time_str, MAX_TIME_STR_LEN);
 
-  printf("buflen = %d, offset = %d, msglen = %d\n", buflen, offset, msglen);
+  printf("buflen = %zd, offset = %d, msglen = %d\n", (size_t)buflen, offset, msglen);
   printf("timestamp = %llu, time = %s\n", timeval, time_str);
   printf("hostname=[%.*s], programname=[%.*s], threadname=[%.*s]\n",
          hostname_len, hostname, programname_len, programname, threadname_len,
@@ -313,6 +318,8 @@ int analyze_received_binary_message(const char *msg, const char *buf,
 }
 
 int test_static_string(int argc, char *argv[]) {
+  (void)argc;  /* unused parameter */
+  (void)argv;  /* unused parameter */
   char pname[MAX_SIZE] = {0};
   SOCKET serverfd = INVALID_SOCKET;
   SOCKET clientfd = INVALID_SOCKET;
@@ -325,7 +332,7 @@ int test_static_string(int argc, char *argv[]) {
   WSADATA wsa_data;
 
   /* Windows: use program name or default */
-  strncpy(pname, "test_binary_logging", MAX_SIZE - 1);
+  strncpy_s(pname, MAX_SIZE, "test_binary_logging", MAX_SIZE - 1);
 
   /* Initialize Winsock */
   rc = WSAStartup(MAKEWORD(2, 2), &wsa_data);
@@ -345,7 +352,7 @@ int test_static_string(int argc, char *argv[]) {
 
   bytes_received =
       receive_msg_from_client(serverfd, buf, MAX_BUF_LEN, &clientaddr);
-  printf("msg sent size = %d\n", strlen(msg));
+  printf("msg sent size = %zd\n", strlen(msg));
   printf("bytes_received = %d\n", bytes_received);
 
   rc = analyze_received_binary_message(msg, buf, bytes_received);
@@ -361,6 +368,8 @@ int test_static_string(int argc, char *argv[]) {
 }
 
 int test_variable_arguments(int argc, char *argv[]) {
+  (void)argc;  /* unused parameter */
+  (void)argv;  /* unused parameter */
   char pname[MAX_SIZE] = {0};
   SOCKET serverfd = INVALID_SOCKET;
   SOCKET clientfd = INVALID_SOCKET;
@@ -385,7 +394,7 @@ int test_variable_arguments(int argc, char *argv[]) {
   char *argstr = format;
 
   /* Windows: use program name or default */
-  strncpy(pname, "test_binary_logging", MAX_SIZE - 1);
+  strncpy_s(pname, MAX_SIZE, "test_binary_logging", MAX_SIZE - 1);
 
   /* Initialize Winsock */
   rc = WSAStartup(MAKEWORD(2, 2), &wsa_data);
@@ -406,7 +415,7 @@ int test_variable_arguments(int argc, char *argv[]) {
 
   bytes_received =
       receive_msg_from_client(serverfd, buf, MAX_BUF_LEN, &clientaddr);
-  printf("SENT: format sent size = %d\n", strlen(format));
+  printf("SENT: format sent size = %zd\n", strlen(format));
   printf("SENT: argptr = %p, argstr = [%s]\n", argptr, argstr);
   printf("bytes_received = %d\n", bytes_received);
 

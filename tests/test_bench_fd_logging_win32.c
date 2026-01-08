@@ -103,13 +103,15 @@ void start_dummy_udp_server(int port) {
   int rc = 0;
   int bytes_received = 0;
 
+  assert(port > 0 && port < 65536);
+
   WSADATA wsa_data;
   WSAStartup(MAKEWORD(2, 2), &wsa_data);
 
   fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
   memset(&addr, 0, sizeof(struct sockaddr_in));
   addr.sin_family = AF_INET;
-  addr.sin_port = htons(port);
+  addr.sin_port = htons((u_short)port);
   addr.sin_addr.s_addr = htonl(INADDR_ANY);
   rc = bind(fd, (struct sockaddr *)&addr, sizeof(struct sockaddr_in));
   assert(rc == 0);
@@ -151,11 +153,12 @@ int main(int argc, const char *argv[]) {
   int port = 0;
   SOCKET fd = INVALID_SOCKET;
   int is_udp_testing = 0;
+  HANDLE udp_server_thread_handle = NULL;
 
   /* Windows: use program name or default */
-  strncpy(pname, "test_bench_fd_logging", MAX_PROCESSNAME_SIZE - 1);
+  strncpy_s(pname, MAX_PROCESSNAME_SIZE, "test_bench_fd_logging", MAX_PROCESSNAME_SIZE - 1);
 
-  HANDLE udp_server_thread_handle;
+
 
   if (argc < 6) {
     num_loops = 10;
@@ -180,6 +183,8 @@ int main(int argc, const char *argv[]) {
     }
     port = atoi(argv[5]);
 
+    assert(port > 0 && port < 65536);
+
     /* Windows: Initialize Winsock */
     rc = WSAStartup(MAKEWORD(2, 2), &wsa_data);
     if (rc != 0) {
@@ -199,7 +204,7 @@ int main(int argc, const char *argv[]) {
     fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     memset(&addr, 0, sizeof(struct sockaddr_in));
     addr.sin_family = AF_INET;
-    addr.sin_port = htons(port);
+    addr.sin_port = htons((u_short)port);
 
     /* Windows: use inet_pton for IPv4 address parsing */
     rc = inet_pton(AF_INET, argv[4], &addr.sin_addr.s_addr);

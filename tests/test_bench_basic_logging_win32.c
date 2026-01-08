@@ -86,14 +86,13 @@ int runall(const char *pname, int num_processes, int num_threads,
 }
 
 int main(int argc, char **argv) {
-  int rc = 0;
   char pname[MAX_PROCESSNAME_SIZE] = {0};
   int num_loops = 0;
   int num_processes = 0;
   int num_threads = 0;
 
   /* Windows: use program name or default */
-  strncpy(pname, "test_bench_basic_logging", MAX_PROCESSNAME_SIZE - 1);
+  strncpy_s(pname, MAX_PROCESSNAME_SIZE, "test_bench_basic_logging", MAX_PROCESSNAME_SIZE - 1);
 
   if (argc < 4) {
     num_loops = 10;

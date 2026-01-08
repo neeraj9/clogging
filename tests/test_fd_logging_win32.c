@@ -20,11 +20,13 @@
 #define MAX_SIZE 32
 
 int main(int argc, char *argv[]) {
+  (void)argc;  /* unused parameter */
+  (void)argv;  /* unused parameter */
   int fd = 1; /* fd for stdout */
   char pname[MAX_SIZE] = {0};
 
   /* Windows: use program name or default */
-  strncpy(pname, "test_fd_logging", MAX_SIZE - 1);
+  strncpy_s(pname, MAX_SIZE, "test_fd_logging", MAX_SIZE - 1);
 
   /* printf("pname = %s\n", pname); */
   /* printf("argv[0] = %s\n", argv[0]); */
