@@ -70,7 +70,11 @@ static THREAD_LOCAL char g_fd_threadname[MAX_PROG_NAME_LEN] = {0};
 static THREAD_LOCAL char g_fd_hostname[MAX_HOSTNAME_LEN] = {0};
 static THREAD_LOCAL int g_fd_pid = 0;
 static THREAD_LOCAL enum LogLevel g_fd_level = DEFAULT_LOG_LEVEL;
-static THREAD_LOCAL int g_fd_fd = 2;            /* stderr fd is default as 2 */
+#ifdef _WIN32
+static THREAD_LOCAL clogging_handle_t g_fd_handle = {CLOGGING_HANDLE_TYPE_CRT, {.crt_fd = 2}};
+#else
+static THREAD_LOCAL clogging_handle_t g_fd_handle = 2; /* stderr fd is default as 2 */
+#endif
 static THREAD_LOCAL int g_fd_prefix_length = 0; /* 1 when prefix length to log
                                                entry */
 /* safeguard calling init_logging multiple times */
@@ -94,7 +98,7 @@ static THREAD_LOCAL uint64_t g_fd_num_msg_drops = 0;
 
 int clogging_fd_init(const char *progname, uint8_t progname_len,
                      const char *threadname, uint8_t threadname_len,
-                     enum LogLevel level, int fd) {
+                     enum LogLevel level, clogging_handle_t handle) {
   int rc = 0;
 
   if (g_fd_is_logging_initialized > 0) {
@@ -138,40 +142,16 @@ int clogging_fd_init(const char *progname, uint8_t progname_len,
   g_fd_pid = (int)getpid();
 #endif
   g_fd_level = level;
-  g_fd_fd = fd;
+  g_fd_handle = handle;
 
-  /* determine the type of fd */
-#ifdef _WIN32
-  {
-    HANDLE handle = (HANDLE)_get_osfhandle(fd);
-    if (handle != INVALID_HANDLE_VALUE) {
-      DWORD type = GetFileType(handle);
-      /* prefix length for pipes and named pipes (FIFOs on Windows) */
-      if (type == FILE_TYPE_PIPE) {
-        g_fd_prefix_length = 1;
-      }
-    }
-    if (g_fd_prefix_length == 0) {
-      /* Check if it's a socket */
-      struct sockaddr addr;
-      int addrlen = sizeof(addr);
-      if (getsockname(fd, &addr, &addrlen) == 0) {
-        g_fd_prefix_length = 1;
-      }
-    }
+  /* determine the type of handle and set prefix length accordingly */
+  if (clogging_handle_is_socket(handle) == 1) {
+    g_fd_prefix_length = 1;
+  } else if (clogging_handle_is_pipe(handle) == 1) {
+    g_fd_prefix_length = 1;
+  } else {
+    g_fd_prefix_length = 0;
   }
-#else
-  {
-    struct stat statbuf;
-    fstat(fd, &statbuf);
-    /* prefix length only when fd is a
-     * fifo, pipe or a socket.
-     */
-    if (S_ISSOCK(statbuf.st_mode) || S_ISFIFO(statbuf.st_mode)) {
-      g_fd_prefix_length = 1;
-    }
-  }
-#endif
 
   return 0;
 }
@@ -211,8 +191,8 @@ void clogging_fd_logmsg(const char *funcname, int linenum, enum LogLevel level,
   remaining_bytes =
       (g_fd_previous_message_bytes - g_fd_previous_message_offset);
   if (len > 0) {
-    len = write(g_fd_fd, &g_fd_previous_message[g_fd_previous_message_offset],
-                remaining_bytes);
+    len = (int)clogging_handle_write(g_fd_handle, &g_fd_previous_message[g_fd_previous_message_offset],
+                                      remaining_bytes);
     if (len <= 0) {
       /* cannot write a thing, so drop the current message
        */
@@ -288,7 +268,7 @@ void clogging_fd_logmsg(const char *funcname, int linenum, enum LogLevel level,
     g_fd_total_message[0] = (len >> 8) & 0x00ff;
     g_fd_total_message[1] = (len & 0x00ff);
   }
-  bytes_sent = write(g_fd_fd, g_fd_total_message, len + msg_offset);
+  bytes_sent = clogging_handle_write(g_fd_handle, g_fd_total_message, len + msg_offset);
 #if VERBOSE
   if (bytes_sent < 0) {
     int err = errno;

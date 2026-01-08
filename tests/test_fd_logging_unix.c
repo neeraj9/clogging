@@ -31,7 +31,7 @@ int main(int argc, char *argv[]) {
   assert(rc == 0);
   /* printf("pname = %s\n", pname); */
   /* printf("argv[0] = %s\n", argv[0]); */
-  FD_INIT_LOGGING(pname, "", LOG_LEVEL_DEBUG, fd);
+  FD_INIT_LOGGING(pname, "", LOG_LEVEL_DEBUG, clogging_create_handle_from_fd(fd));
   FD_LOG_DEBUG("A fd debug log looks like this");
   assert(FD_GET_LOG_LEVEL() == LOG_LEVEL_DEBUG);
   FD_SET_LOG_LEVEL(LOG_LEVEL_INFO);

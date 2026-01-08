@@ -9,6 +9,13 @@ foreach(test_target ${TEST_TARGETS})
     add_executable(${test_target} ${test_target}.c)
     target_link_libraries(${test_target} PRIVATE clogging)
     add_test(NAME ${test_target} COMMAND ${test_target})
+    # Copy clogging DLL to test directory on Windows
+    if(BUILD_SHARED_LIBS AND WIN32)
+        add_custom_command(TARGET ${test_target} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            $<TARGET_FILE:clogging>
+            $<TARGET_FILE_DIR:${test_target}>)
+    endif()
 endforeach()
 
 # Platform-specific test for test_bench_basic_logging
@@ -21,6 +28,14 @@ endif()
 target_link_libraries(test_bench_basic_logging PRIVATE clogging)
 add_test(NAME test_bench_basic_logging COMMAND test_bench_basic_logging)
 
+# Copy clogging DLL to test directory on Windows
+if(BUILD_SHARED_LIBS AND WIN32)
+    add_custom_command(TARGET test_bench_basic_logging POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        $<TARGET_FILE:clogging>
+        $<TARGET_FILE_DIR:test_bench_basic_logging>)
+endif()
+
 # Platform-specific test for test_binary_logging
 if(WIN32)
     add_executable(test_binary_logging test_binary_logging_win32.c)
@@ -31,6 +46,14 @@ else()
 endif()
 
 add_test(NAME test_binary_logging COMMAND test_binary_logging)
+
+# Copy clogging DLL to test directory on Windows
+if(BUILD_SHARED_LIBS AND WIN32)
+    add_custom_command(TARGET test_binary_logging POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        $<TARGET_FILE:clogging>
+        $<TARGET_FILE_DIR:test_binary_logging>)
+endif()
 
 # Platform-specific test for test_bench_fd_logging
 if(WIN32)
@@ -43,6 +66,14 @@ endif()
 
 add_test(NAME test_bench_fd_logging COMMAND test_bench_fd_logging)
 
+# Copy clogging DLL to test directory on Windows
+if(BUILD_SHARED_LIBS AND WIN32)
+    add_custom_command(TARGET test_bench_fd_logging POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        $<TARGET_FILE:clogging>
+        $<TARGET_FILE_DIR:test_bench_fd_logging>)
+endif()
+
 # Platform-specific test for test_fd_logging
 if(WIN32)
     add_executable(test_fd_logging test_fd_logging_win32.c)
@@ -52,3 +83,11 @@ endif()
 
 target_link_libraries(test_fd_logging PRIVATE clogging)
 add_test(NAME test_fd_logging COMMAND test_fd_logging)
+
+# Copy clogging DLL to test directory on Windows
+if(BUILD_SHARED_LIBS AND WIN32)
+    add_custom_command(TARGET test_fd_logging POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        $<TARGET_FILE:clogging>
+        $<TARGET_FILE_DIR:test_fd_logging>)
+endif()

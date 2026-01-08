@@ -46,15 +46,22 @@ extern "C" {
  * call threadname = "-worker1" for worker1 or say
  * threadname = "-tcplistener" for a worker who listens for tcp connections.
  *
- * Note that if fd is opened in blocking mode then the call to
+ * Note that if handle represents a blocking fd/handle then the call to
  * every clogging_fd_logmsg() can block, so open in nonblocking mode
- * but then its possible that partial data is written to fd. This is
+ * but then its possible that partial data is written to handle. This is
  * worse in some ways, so take your pick. Personally, I would risk the
  * non-blocking mode and handle partial writes at the receiver.
  */
 int clogging_fd_init(const char *progname, uint8_t progname_len,
                      const char *threadname, uint8_t threadname_len,
-                     enum LogLevel level, int fd);
+                     enum LogLevel level, clogging_handle_t handle);
+
+/* Backward compatibility macro for old int-based API.
+ * Converts int fd to clogging_handle_t automatically.
+ */
+#define clogging_fd_init_compat(progname, progname_len, threadname, threadname_len, level, fd) \
+  clogging_fd_init((progname), (progname_len), (threadname), (threadname_len), (level), \
+                   clogging_create_handle_from_fd(fd))
 
 /*
  * It is a MT safe implementation.

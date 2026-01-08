@@ -70,7 +70,11 @@ static THREAD_LOCAL char g_binary_hostname[MAX_HOSTNAME_LEN] = {0};
 static THREAD_LOCAL int g_binary_hostname_length = 0;
 static THREAD_LOCAL int g_binary_pid = 0;
 static THREAD_LOCAL enum LogLevel g_binary_level = DEFAULT_LOG_LEVEL;
-static THREAD_LOCAL int g_binary_fd = 2; /* stderr fd is default as 2 */
+#ifdef _WIN32
+static THREAD_LOCAL clogging_handle_t g_binary_handle = {CLOGGING_HANDLE_TYPE_CRT, {.crt_fd = 2}};
+#else
+static THREAD_LOCAL clogging_handle_t g_binary_handle = 2; /* stderr fd is default as 2 */
+#endif
 /* safeguard calling init_logging multiple times */
 static THREAD_LOCAL int g_binary_is_logging_initialized = 0;
 
@@ -152,7 +156,7 @@ int portable_copy(char *store, ssize_t *offset, unsigned long long val,
 
 int clogging_binary_init(const char *progname, uint8_t progname_len,
                          const char *threadname, uint8_t threadname_len,
-                         enum LogLevel level, int fd) {
+                         enum LogLevel level, clogging_handle_t handle) {
   if (g_binary_is_logging_initialized > 0) {
     fprintf(stderr, "logging is already initialized or in the"
                     " process of initialization.\n");
@@ -197,7 +201,7 @@ int clogging_binary_init(const char *progname, uint8_t progname_len,
     g_binary_pid = (int)getpid();
   #endif
   g_binary_level = level;
-  g_binary_fd = fd;
+  g_binary_handle = handle;
 
   return 0;
 }
@@ -236,7 +240,7 @@ void clogging_binary_logmsg(const char *filename, const char *funcname,
   remaining_bytes =
       (g_binary_previous_message_bytes - g_binary_previous_message_offset);
   if (remaining_bytes > 0) {
-    len = write(g_binary_fd,
+    len = (int)clogging_handle_write(g_binary_handle,
                 &g_binary_previous_message[g_binary_previous_message_offset],
                 remaining_bytes);
     if (len <= 0) {
@@ -329,7 +333,7 @@ void clogging_binary_logmsg(const char *filename, const char *funcname,
   store[0] = (len >> 8) & 0x00ff;
   store[1] = (len & 0x00ff);
 
-  bytes_written = write(g_binary_fd, store, offset);
+  bytes_written = clogging_handle_write(g_binary_handle, store, offset);
   if (bytes_written < 0) {
     /* just ignore stuff because we cannot write a
      * single bit.

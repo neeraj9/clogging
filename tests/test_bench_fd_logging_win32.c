@@ -50,7 +50,7 @@ DWORD WINAPI work(LPVOID data) {
   int threadname_len = snprintf(threadname, MAX_THREADNAME_SIZE, "thread-%d", ctx->threadindex);
   assert(threadname_len > 0 && threadname_len < MAX_THREADNAME_SIZE);
 
-  FD_INIT_LOGGING(ctx->processname, ctx->processname_len, threadname, (uint8_t)threadname_len, LOG_LEVEL_INFO, (int)ctx->fd);
+  FD_INIT_LOGGING(ctx->processname, ctx->processname_len, threadname, (uint8_t)threadname_len, LOG_LEVEL_INFO, clogging_create_handle_from_fd((int)ctx->fd));
 
   for (i = 0; i < ctx->num_loops; ++i) {
     FD_LOG_INFO("Some log which gets printed to console.");
@@ -66,7 +66,7 @@ int runall(const char *pname, uint8_t processname_len, int num_processes, int nu
   struct context *thread_contexts =
       (struct context *)malloc(sizeof(struct context) * num_threads);
 
-  FD_INIT_LOGGING(pname, processname_len, "", 0, LOG_LEVEL_DEBUG, (int)fd);
+  FD_INIT_LOGGING(pname, processname_len, "", 0, LOG_LEVEL_DEBUG, clogging_create_handle_from_fd((int)fd));
 
   FD_LOG_INFO("Benchmarking starts");
   FD_LOG_INFO("pname = %s, np = %d, nt = %d, nl = %d\n", pname, num_processes,
