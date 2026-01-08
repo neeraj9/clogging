@@ -13,14 +13,12 @@
 
 #include <stdint.h>
 
-#define BINARY_INIT_LOGGING(pn, tn, level, fd) \
-	clogging_binary_init((pn), (tn), (level), (fd))
-#define BINARY_SET_LOG_LEVEL(level) \
-	clogging_binary_set_loglevel(level)
-#define BINARY_GET_LOG_LEVEL() \
-	clogging_binary_get_loglevel()
-#define BINARY_GET_NUM_DROPPED_MESSAGES() \
-	clogging_binary_get_num_dropped_messages()
+#define BINARY_INIT_LOGGING(pn, tn, level, fd)                                 \
+  clogging_binary_init((pn), (tn), (level), (fd))
+#define BINARY_SET_LOG_LEVEL(level) clogging_binary_set_loglevel(level)
+#define BINARY_GET_LOG_LEVEL() clogging_binary_get_loglevel()
+#define BINARY_GET_NUM_DROPPED_MESSAGES()                                      \
+  clogging_binary_get_num_dropped_messages()
 
 #ifdef __FILENAME__
 #define NCF_ __FILENAME__
@@ -34,25 +32,28 @@
  * variable arguments and the format is the entier message.
  */
 
-#define BINARY_LOG_ERROR(format, ...) \
-	clogging_binary_logmsg(NCF_, __func__, __LINE__, LOG_LEVEL_ERROR, format, ## __VA_ARGS__)
-#define BINARY_LOG_WARN(format, ...) \
-	clogging_binary_logmsg(NCF_, __func__, __LINE__, LOG_LEVEL_WARN, format, ## __VA_ARGS__)
-#define BINARY_LOG_INFO(format, ...) \
-	clogging_binary_logmsg(NCF_, __func__, __LINE__, LOG_LEVEL_INFO, format, ## __VA_ARGS__)
-#define BINARY_LOG_DEBUG(format, ...) \
-	clogging_binary_logmsg(NCF_, __func__, __LINE__, LOG_LEVEL_DEBUG, format, ## __VA_ARGS__)
-
+#define BINARY_LOG_ERROR(format, ...)                                          \
+  clogging_binary_logmsg(NCF_, __func__, __LINE__, LOG_LEVEL_ERROR, format,    \
+                         ##__VA_ARGS__)
+#define BINARY_LOG_WARN(format, ...)                                           \
+  clogging_binary_logmsg(NCF_, __func__, __LINE__, LOG_LEVEL_WARN, format,     \
+                         ##__VA_ARGS__)
+#define BINARY_LOG_INFO(format, ...)                                           \
+  clogging_binary_logmsg(NCF_, __func__, __LINE__, LOG_LEVEL_INFO, format,     \
+                         ##__VA_ARGS__)
+#define BINARY_LOG_DEBUG(format, ...)                                          \
+  clogging_binary_logmsg(NCF_, __func__, __LINE__, LOG_LEVEL_DEBUG, format,    \
+                         ##__VA_ARGS__)
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 enum VarArgType {
-	BINARY_LOG_VAR_ARG_INTEGER = 0,
-	BINARY_LOG_VAR_ARG_DOUBLE = 1,
-	BINARY_LOG_VAR_ARG_POINTER = 2,
-	BINARY_LOG_VAR_ARG_STRING = 3
+  BINARY_LOG_VAR_ARG_INTEGER = 0,
+  BINARY_LOG_VAR_ARG_DOUBLE = 1,
+  BINARY_LOG_VAR_ARG_POINTER = 2,
+  BINARY_LOG_VAR_ARG_STRING = 3
 };
 
 /*
@@ -71,7 +72,7 @@ enum VarArgType {
  * non-blocking mode and handle partial writes at the receiver.
  */
 int clogging_binary_init(const char *progname, const char *threadname,
-			 enum LogLevel level, int fd);
+                         enum LogLevel level, int fd);
 
 /*
  * It is a MT safe implementation.
@@ -99,11 +100,9 @@ enum LogLevel clogging_binary_get_loglevel(void);
  * It is a MT safe implementation.
  *
  */
-void clogging_binary_logmsg(const char *filename,
-			    const char *funcname,
-			    int linenum,
-			    enum LogLevel level,
-			    const char *format, ...);
+void clogging_binary_logmsg(const char *filename, const char *funcname,
+                            int linenum, enum LogLevel level,
+                            const char *format, ...);
 
 /* Get the number of messages dropped due to overload or
  * internal errors.

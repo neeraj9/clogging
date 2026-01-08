@@ -27,10 +27,10 @@
  * See basic_logging.c logmsg() as an implementation sample.
  */
 enum LogLevel {
-	LOG_LEVEL_ERROR = 0,
-	LOG_LEVEL_WARN = 1,
-	LOG_LEVEL_INFO = 2,
-	LOG_LEVEL_DEBUG = 3
+  LOG_LEVEL_ERROR = 0,
+  LOG_LEVEL_WARN = 1,
+  LOG_LEVEL_INFO = 2,
+  LOG_LEVEL_DEBUG = 3
 };
 
 /* The default log level is INFO and must be considered so in

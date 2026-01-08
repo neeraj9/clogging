@@ -13,28 +13,30 @@
 
 #include <stdint.h>
 
-#define BASIC_INIT_LOGGING(pn, tn, level) \
-	clogging_basic_init((pn), (tn), (level))
-#define BASIC_SET_LOG_LEVEL(level) \
-	clogging_basic_set_loglevel(level)
-#define BASIC_GET_LOG_LEVEL() \
-	clogging_basic_get_loglevel()
-#define BASIC_GET_NUM_DROPPED_MESSAGES() \
-	clogging_basic_get_num_dropped_messages()
+#define BASIC_INIT_LOGGING(pn, tn, level)                                      \
+  clogging_basic_init((pn), (tn), (level))
+#define BASIC_SET_LOG_LEVEL(level) clogging_basic_set_loglevel(level)
+#define BASIC_GET_LOG_LEVEL() clogging_basic_get_loglevel()
+#define BASIC_GET_NUM_DROPPED_MESSAGES()                                       \
+  clogging_basic_get_num_dropped_messages()
 
 /* Lets follow the ISO C standard of 1999 and use ## __VA_ARGS__ so as
  * to avoid the neccessity of providing even a single argument after
  * format. That is its possible that the user did not provide any
  * variable arguments and the format is the entier message.
  */
-#define BASIC_LOG_ERROR(format, ...) \
-	clogging_basic_logmsg(__func__, __LINE__, LOG_LEVEL_ERROR, format, ## __VA_ARGS__)
-#define BASIC_LOG_WARN(format, ...) \
-	clogging_basic_logmsg(__func__, __LINE__, LOG_LEVEL_WARN, format, ## __VA_ARGS__)
-#define BASIC_LOG_INFO(format, ...) \
-	clogging_basic_logmsg(__func__, __LINE__, LOG_LEVEL_INFO, format, ## __VA_ARGS__)
-#define BASIC_LOG_DEBUG(format, ...) \
-	clogging_basic_logmsg(__func__, __LINE__, LOG_LEVEL_DEBUG, format, ## __VA_ARGS__)
+#define BASIC_LOG_ERROR(format, ...)                                           \
+  clogging_basic_logmsg(__func__, __LINE__, LOG_LEVEL_ERROR, format,           \
+                        ##__VA_ARGS__)
+#define BASIC_LOG_WARN(format, ...)                                            \
+  clogging_basic_logmsg(__func__, __LINE__, LOG_LEVEL_WARN, format,            \
+                        ##__VA_ARGS__)
+#define BASIC_LOG_INFO(format, ...)                                            \
+  clogging_basic_logmsg(__func__, __LINE__, LOG_LEVEL_INFO, format,            \
+                        ##__VA_ARGS__)
+#define BASIC_LOG_DEBUG(format, ...)                                           \
+  clogging_basic_logmsg(__func__, __LINE__, LOG_LEVEL_DEBUG, format,           \
+                        ##__VA_ARGS__)
 
 #ifdef __cplusplus
 extern "C" {
@@ -50,7 +52,7 @@ extern "C" {
  * threadname = "-tcplistener" for a worker who listens for tcp connections.
  */
 int clogging_basic_init(const char *progname, const char *threadname,
-		        enum LogLevel level);
+                        enum LogLevel level);
 
 /*
  * It is a MT safe implementation.
@@ -79,9 +81,8 @@ enum LogLevel clogging_basic_get_loglevel(void);
  * It is a MT safe implementation.
  *
  */
-void clogging_basic_logmsg(const char *funcname,
-			   int linenum, enum LogLevel level,
-			   const char *format, ...);
+void clogging_basic_logmsg(const char *funcname, int linenum,
+                           enum LogLevel level, const char *format, ...);
 
 /* Get the number of messages dropped due to overload or
  * internal errors.

@@ -36,5 +36,4 @@
 #define LOG_DEBUG(format, ...)
 #endif
 
-
 #endif /* CLOGGING_LOGGING_H */

@@ -11,13 +11,12 @@
 #include <assert.h>
 #include <stdio.h>
 
-int main(int argc, char *argv[])
-{
-	INIT_LOGGING(argv[0], "", LOG_LEVEL_DEBUG);
-	LOG_DEBUG("A basic debug log looks like this");
-	assert(GET_LOG_LEVEL() == LOG_LEVEL_DEBUG);
-	SET_LOG_LEVEL(LOG_LEVEL_INFO);
-	assert(GET_LOG_LEVEL() == LOG_LEVEL_INFO);
-	assert(GET_NUM_DROPPED_MESSAGES() == 0);
-	return 0;
+int main(int argc, char *argv[]) {
+  INIT_LOGGING(argv[0], "", LOG_LEVEL_DEBUG);
+  LOG_DEBUG("A basic debug log looks like this");
+  assert(GET_LOG_LEVEL() == LOG_LEVEL_DEBUG);
+  SET_LOG_LEVEL(LOG_LEVEL_INFO);
+  assert(GET_LOG_LEVEL() == LOG_LEVEL_INFO);
+  assert(GET_NUM_DROPPED_MESSAGES() == 0);
+  return 0;
 }
