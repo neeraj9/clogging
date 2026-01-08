@@ -125,6 +125,29 @@ void test_char_length(void) {
   printf("✓ Character length detection test passed\n");
 }
 
+/* Test inline emoji and unicode characters */
+void test_inline_emoji(void) {
+  /* Using inline emoji directly instead of hex codes */
+  const char *emoji_rocket = "🚀"; /* rocket */
+  const char *emoji_smile = "😀"; /* smiling face */
+  const char *emoji_heart = "❤"; /* red heart */
+  const char *mixed_inline = "Hello 🌍 World!"; /* Hello world with globe emoji */
+  
+  assert(clogging_utf8_validate(emoji_rocket, 0) == 1);
+  assert(clogging_utf8_strlen(emoji_rocket) == 1);
+  
+  assert(clogging_utf8_validate(emoji_smile, 0) == 1);
+  assert(clogging_utf8_strlen(emoji_smile) == 1);
+  
+  assert(clogging_utf8_validate(emoji_heart, 0) == 1);
+  assert(clogging_utf8_strlen(emoji_heart) == 1);
+  
+  assert(clogging_utf8_validate(mixed_inline, 0) == 1);
+  assert(clogging_utf8_strlen(mixed_inline) == 14); /* "Hello " (6) + 🌍 (1) + " World!" (7) = 14 */
+  
+  printf("✓ Inline emoji test passed\n");
+}
+
 int main(void) {
   printf("Running UTF-8 validation tests...\n\n");
 
@@ -141,6 +164,7 @@ int main(void) {
   test_utf16_surrogate();
   test_continuation_byte();
   test_char_length();
+  test_inline_emoji();
 
   printf("\n✓ All UTF-8 validation tests passed!\n");
   return 0;

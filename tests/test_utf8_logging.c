@@ -67,9 +67,20 @@ int main(void) {
   SET_LOG_LEVEL(LOG_LEVEL_WARN);
   assert(GET_LOG_LEVEL() == LOG_LEVEL_WARN);
   LOG_DEBUG("This debug message should be filtered");
-  LOG_WARN("This warning \xF0\x9F\x9A\x80 should appear");
+  LOG_WARN("This warning 🚀 should appear");
   assert(GET_NUM_DROPPED_MESSAGES() == 0);
   printf("✓ Log level filtering passed\n\n");
+
+  /* Test 8: Inline emoji in log messages */
+  printf("Test 8: Inline emoji in messages\n");
+  SET_LOG_LEVEL(LOG_LEVEL_DEBUG);
+  LOG_INFO("Application started 🚀");
+  LOG_INFO("Status check ✓ completed");
+  LOG_INFO("Processing data 📊 with emoji 😀");
+  LOG_WARN("Warning: ⚠️ potential issue detected");
+  LOG_ERROR("Error: ❌ operation failed");
+  assert(GET_NUM_DROPPED_MESSAGES() == 0);
+  printf("✓ Inline emoji logging passed\n\n");
 
   printf("✓ All UTF-8 logging tests passed!\n");
   return 0;
