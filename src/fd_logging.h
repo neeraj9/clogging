@@ -91,9 +91,9 @@ enum LogLevel clogging_fd_get_loglevel(void);
  *
  * IMPORTANT: In case of MT (multi threaded) implementation
  * the logmsg() will cause the lock/unlock to happen since the
- * underlying mechanism for logging is fprintf to stderr.
- * This has performance cost when logging is done a lot, so
- * dont use this method if your application does a lot of logging.
+ * underlying mechanism for logging is write to fd.
+ * This has performance cost can be substantial for huge
+ * logging volume.
  *
  * It is a MT safe implementation.
  *
