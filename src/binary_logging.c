@@ -108,8 +108,8 @@ enum length_specifier {
   PCOPY_DATA_TYPE_ #bytes(store, offsetptr, llval)
 
 /* function prototypes */
-static int fill_variable_arguments(char *store, int offset, const char *format,
-                                   va_list ap);
+static ssize_t fill_variable_arguments(char *store, ssize_t offset, const char *format,
+                                       va_list ap);
 
 /* Think about an optimized approach instead of using this generic
  * implementation in the future.
@@ -356,8 +356,8 @@ uint64_t clogging_binary_get_num_dropped_messages(void) {
 /* return the modified offset back to the caller indicating
  * the number of bytes written in the store
  */
-static int fill_variable_arguments(char *store, int offset, const char *format,
-                                   va_list ap) {
+static ssize_t fill_variable_arguments(char *store, ssize_t offset, const char *format,
+                                       va_list ap) {
   long double ldbl = (long double)0.0;
   double dbl = 0.0;
   unsigned long long llval = 0LLU;
