@@ -69,3 +69,7 @@ libs/clogging.pc
 test-suite.log
 test_*.log
 test_*.trs
+
+# Your customizations below
+.github/agents
+.vscode/
