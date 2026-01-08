@@ -187,7 +187,8 @@ Note: UTF-8 tests not built (as expected)
 
 ### Basic UTF-8 Logging (with flag enabled)
 ```c
-INIT_LOGGING("myapp", 5, "", 0, LOG_LEVEL_INFO);
+/* the second argument is the total size of the buffer including null byte */
+INIT_LOGGING("myapp", 5 + 1, "", 0, LOG_LEVEL_INFO);
 LOG_INFO("Hello 🚀");           // Emoji works
 LOG_INFO("Café");                // International chars work
 LOG_INFO("你好世界");             // CJK works
