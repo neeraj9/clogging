@@ -260,67 +260,141 @@ void clogging_fd_logmsg(const char *funcname, int linenum, enum LogLevel level,
     msg_offset = 2;
   }
 
-  /* <HEADER> <MESSAGE>
-   *	<HEADER> = <TIMESTAMP> <HOSTNAME>
-   *	<MESSAGE> = <TAG> <LEVEL> <CONTENT>
-   *		<TAG> = <PROGRAM><THREAD>[<PID>]
-   *		<LEVEL> = DEBUG | INFO | WARNING | ERROR
-   *		<CONTENT> = <FUNCTION/MODULE>: <APPLICATION_MESSAGE>
-   */
-  if (g_fd_log_options.prefix_fields_flag == CLOGGING_PREFIX_DEFAULT) {
-    /* optimization for default setting */
-    len = snprintf(&g_fd_total_message[msg_offset], TOTAL_MSG_BYTES - msg_offset,
-                   "%s %s %s%s[%d] %s %s(%d): %s\n", time_str, g_fd_hostname,
-                   g_fd_progname, g_fd_threadname, g_fd_pid, level_str, funcname,
-                   linenum, msg);
-  } else {
-    /* Build prefix based on prefix_fields_flag */
-    char prefix[512] = {0};
-    int prefix_len = 0;
-    
-    if (g_fd_log_options.prefix_fields_flag & CLOGGING_PREFIX_TIMESTAMP) {
-      prefix_len += snprintf(prefix + prefix_len, sizeof(prefix) - prefix_len, "%s ", time_str);
-    }
-    if (g_fd_log_options.prefix_fields_flag & CLOGGING_PREFIX_HOSTNAME) {
-      prefix_len += snprintf(prefix + prefix_len, sizeof(prefix) - prefix_len, "%s ", g_fd_hostname);
-    }
-    if (g_fd_log_options.prefix_fields_flag & CLOGGING_PREFIX_PROGNAME) {
-      prefix_len += snprintf(prefix + prefix_len, sizeof(prefix) - prefix_len, "%s", g_fd_progname);
-    }
-    if (g_fd_log_options.prefix_fields_flag & CLOGGING_PREFIX_PID) {
-      prefix_len += snprintf(prefix + prefix_len, sizeof(prefix) - prefix_len, "%s[%d]", g_fd_threadname, g_fd_pid);
-    } else if (g_fd_log_options.prefix_fields_flag & CLOGGING_PREFIX_PROGNAME) {
-      prefix_len += snprintf(prefix + prefix_len, sizeof(prefix) - prefix_len, "%s", g_fd_threadname);
-    }
-    if (g_fd_log_options.prefix_fields_flag & CLOGGING_PREFIX_LOGLEVEL) {
-      prefix_len += snprintf(prefix + prefix_len, sizeof(prefix) - prefix_len, " %s", level_str);
-    }
-    
-    char content_prefix[128] = {0};
-    int content_len = 0;
-    if (g_fd_log_options.prefix_fields_flag & CLOGGING_PREFIX_FUNCNAME) {
-      content_len += snprintf(content_prefix + content_len, sizeof(content_prefix) - content_len, "%s", funcname);
-    }
-    if (g_fd_log_options.prefix_fields_flag & CLOGGING_PREFIX_LINENUM) {
-      content_len += snprintf(content_prefix + content_len, sizeof(content_prefix) - content_len, "(%d)", linenum);
-    }
-    
-    /* leave the first two bytes for size */
-    if (prefix_len > 0) {
-      if (content_len > 0) {
-        len = snprintf(&g_fd_total_message[msg_offset], TOTAL_MSG_BYTES - msg_offset,
-                      "%s %s: %s\n", prefix, content_prefix, msg);
-      } else {
-        len = snprintf(&g_fd_total_message[msg_offset], TOTAL_MSG_BYTES - msg_offset,
-                      "%s %s\n", prefix, msg);
-      }
+  /* JSON format output if enabled */
+  if (g_fd_log_options.json) {
+
+    if (g_fd_log_options.prefix_fields_flag == CLOGGING_PREFIX_DEFAULT) {
+      /* optimization for default setting */
+      len = snprintf(&g_fd_total_message[msg_offset], TOTAL_MSG_BYTES - msg_offset,
+                     "{\"timestamp\":\"%s\", \"hostname\":\"%s\", \"progname\":\"%s\", \"threadname\":\"%s\", \"pid\":%d, \"level\":\"%s\", \"funcname\":\"%s\", \"linenum\":%d, \"message\":\"%s\"}\n",
+                     time_str, g_fd_hostname, g_fd_progname, g_fd_threadname, g_fd_pid, level_str, funcname, linenum, msg);
     } else {
-      if (content_len > 0) {
-        len = snprintf(&g_fd_total_message[msg_offset], TOTAL_MSG_BYTES - msg_offset,
-                      "%s: %s\n", content_prefix, msg);
+      /* Build JSON object: {"timestamp":"...", "hostname":"...", ...} */
+      int json_pos = msg_offset;
+      
+      /* Start JSON object */
+      json_pos += snprintf(&g_fd_total_message[json_pos], TOTAL_MSG_BYTES - json_pos, "{");
+      
+      /* Add timestamp if enabled */
+      if (g_fd_log_options.prefix_fields_flag & CLOGGING_PREFIX_TIMESTAMP) {
+        json_pos += snprintf(&g_fd_total_message[json_pos], TOTAL_MSG_BYTES - json_pos, "\"timestamp\":\"%s\"", time_str);
+      }
+      
+      /* Add hostname if enabled */
+      if (g_fd_log_options.prefix_fields_flag & CLOGGING_PREFIX_HOSTNAME) {
+        if (json_pos > (msg_offset + 1)) json_pos += snprintf(&g_fd_total_message[json_pos], TOTAL_MSG_BYTES - json_pos, ",");
+        json_pos += snprintf(&g_fd_total_message[json_pos], TOTAL_MSG_BYTES - json_pos, "\"hostname\":\"%s\"", g_fd_hostname);
+      }
+      
+      /* Add program name if enabled */
+      if (g_fd_log_options.prefix_fields_flag & CLOGGING_PREFIX_PROGNAME) {
+        if (json_pos > (msg_offset + 1)) json_pos += snprintf(&g_fd_total_message[json_pos], TOTAL_MSG_BYTES - json_pos, ",");
+        json_pos += snprintf(&g_fd_total_message[json_pos], TOTAL_MSG_BYTES - json_pos, "\"progname\":\"%s\"", g_fd_progname);
+      }
+      
+      /* Add thread name if enabled (along with PID or as separate field) */
+      if ((g_fd_log_options.prefix_fields_flag & CLOGGING_PREFIX_PID) ||
+          (g_fd_log_options.prefix_fields_flag & CLOGGING_PREFIX_PROGNAME)) {
+        if (json_pos > (msg_offset + 1)) json_pos += snprintf(&g_fd_total_message[json_pos], TOTAL_MSG_BYTES - json_pos, ",");
+        json_pos += snprintf(&g_fd_total_message[json_pos], TOTAL_MSG_BYTES - json_pos, "\"threadname\":\"%s\"", g_fd_threadname);
+      }
+      
+      /* Add PID if enabled */
+      if (g_fd_log_options.prefix_fields_flag & CLOGGING_PREFIX_PID) {
+        if (json_pos > (msg_offset + 1)) json_pos += snprintf(&g_fd_total_message[json_pos], TOTAL_MSG_BYTES - json_pos, ",");
+        json_pos += snprintf(&g_fd_total_message[json_pos], TOTAL_MSG_BYTES - json_pos, "\"pid\":%d", g_fd_pid);
+      }
+      
+      /* Add log level if enabled */
+      if (g_fd_log_options.prefix_fields_flag & CLOGGING_PREFIX_LOGLEVEL) {
+        if (json_pos > (msg_offset + 1)) json_pos += snprintf(&g_fd_total_message[json_pos], TOTAL_MSG_BYTES - json_pos, ",");
+        json_pos += snprintf(&g_fd_total_message[json_pos], TOTAL_MSG_BYTES - json_pos, "\"level\":\"%s\"", level_str);
+      }
+      
+      /* Add function name if enabled */
+      if (g_fd_log_options.prefix_fields_flag & CLOGGING_PREFIX_FUNCNAME) {
+        if (json_pos > (msg_offset + 1)) json_pos += snprintf(&g_fd_total_message[json_pos], TOTAL_MSG_BYTES - json_pos, ",");
+        json_pos += snprintf(&g_fd_total_message[json_pos], TOTAL_MSG_BYTES - json_pos, "\"funcname\":\"%s\"", funcname);
+      }
+      
+      /* Add line number if enabled */
+      if (g_fd_log_options.prefix_fields_flag & CLOGGING_PREFIX_LINENUM) {
+        if (json_pos > (msg_offset + 1)) json_pos += snprintf(&g_fd_total_message[json_pos], TOTAL_MSG_BYTES - json_pos, ",");
+        json_pos += snprintf(&g_fd_total_message[json_pos], TOTAL_MSG_BYTES - json_pos, "\"linenum\":%d", linenum);
+      }
+      
+      /* Add message */
+      if (json_pos > (msg_offset + 1)) json_pos += snprintf(&g_fd_total_message[json_pos], TOTAL_MSG_BYTES - json_pos, ",");
+      json_pos += snprintf(&g_fd_total_message[json_pos], TOTAL_MSG_BYTES - json_pos, "\"message\":\"%s\"", msg);
+      
+      /* Close JSON object */
+      json_pos += snprintf(&g_fd_total_message[json_pos], TOTAL_MSG_BYTES - json_pos, "}\n");
+      
+      len = json_pos - msg_offset;
+    }
+  } else {
+    /* <HEADER> <MESSAGE>
+     *	<HEADER> = <TIMESTAMP> <HOSTNAME>
+     *	<MESSAGE> = <TAG> <LEVEL> <CONTENT>
+     *		<TAG> = <PROGRAM><THREAD>[<PID>]
+     *		<LEVEL> = DEBUG | INFO | WARNING | ERROR
+     *		<CONTENT> = <FUNCTION/MODULE>: <APPLICATION_MESSAGE>
+     */
+    if (g_fd_log_options.prefix_fields_flag == CLOGGING_PREFIX_DEFAULT) {
+      /* optimization for default setting */
+      len = snprintf(&g_fd_total_message[msg_offset], TOTAL_MSG_BYTES - msg_offset,
+                     "%s %s %s%s[%d] %s %s(%d): %s\n", time_str, g_fd_hostname,
+                     g_fd_progname, g_fd_threadname, g_fd_pid, level_str, funcname,
+                     linenum, msg);
+    } else {
+      /* Build prefix based on prefix_fields_flag */
+      char prefix[512] = {0};
+      int prefix_len = 0;
+      
+      if (g_fd_log_options.prefix_fields_flag & CLOGGING_PREFIX_TIMESTAMP) {
+        prefix_len += snprintf(prefix + prefix_len, sizeof(prefix) - prefix_len, "%s ", time_str);
+      }
+      if (g_fd_log_options.prefix_fields_flag & CLOGGING_PREFIX_HOSTNAME) {
+        prefix_len += snprintf(prefix + prefix_len, sizeof(prefix) - prefix_len, "%s ", g_fd_hostname);
+      }
+      if (g_fd_log_options.prefix_fields_flag & CLOGGING_PREFIX_PROGNAME) {
+        prefix_len += snprintf(prefix + prefix_len, sizeof(prefix) - prefix_len, "%s", g_fd_progname);
+      }
+      if (g_fd_log_options.prefix_fields_flag & CLOGGING_PREFIX_PID) {
+        prefix_len += snprintf(prefix + prefix_len, sizeof(prefix) - prefix_len, "%s[%d]", g_fd_threadname, g_fd_pid);
+      } else if (g_fd_log_options.prefix_fields_flag & CLOGGING_PREFIX_PROGNAME) {
+        prefix_len += snprintf(prefix + prefix_len, sizeof(prefix) - prefix_len, "%s", g_fd_threadname);
+      }
+      if (g_fd_log_options.prefix_fields_flag & CLOGGING_PREFIX_LOGLEVEL) {
+        prefix_len += snprintf(prefix + prefix_len, sizeof(prefix) - prefix_len, " %s", level_str);
+      }
+      
+      char content_prefix[128] = {0};
+      int content_len = 0;
+      if (g_fd_log_options.prefix_fields_flag & CLOGGING_PREFIX_FUNCNAME) {
+        content_len += snprintf(content_prefix + content_len, sizeof(content_prefix) - content_len, "%s", funcname);
+      }
+      if (g_fd_log_options.prefix_fields_flag & CLOGGING_PREFIX_LINENUM) {
+        content_len += snprintf(content_prefix + content_len, sizeof(content_prefix) - content_len, "(%d)", linenum);
+      }
+      
+      /* leave the first two bytes for size */
+      if (prefix_len > 0) {
+        if (content_len > 0) {
+          len = snprintf(&g_fd_total_message[msg_offset], TOTAL_MSG_BYTES - msg_offset,
+                        "%s %s: %s\n", prefix, content_prefix, msg);
+        } else {
+          len = snprintf(&g_fd_total_message[msg_offset], TOTAL_MSG_BYTES - msg_offset,
+                        "%s %s\n", prefix, msg);
+        }
       } else {
-        len = snprintf(&g_fd_total_message[msg_offset], TOTAL_MSG_BYTES - msg_offset,
-                      "%s\n", msg);
+        if (content_len > 0) {
+          len = snprintf(&g_fd_total_message[msg_offset], TOTAL_MSG_BYTES - msg_offset,
+                        "%s: %s\n", content_prefix, msg);
+        } else {
+          len = snprintf(&g_fd_total_message[msg_offset], TOTAL_MSG_BYTES - msg_offset,
+                        "%s\n", msg);
+        }
       }
     }
   }

@@ -179,61 +179,135 @@ void clogging_basic_logmsg(const char *funcname, int linenum,
   }
   va_end(ap);
 
-  /* <HEADER> <MESSAGE>
-   *	<HEADER> = <TIMESTAMP> <HOSTNAME>
-   *	<MESSAGE> = <TAG> <LEVEL> <CONTENT>
-   *		<TAG> = <PROGRAM><THREAD>[<PID>]
-   *		<LEVEL> = DEBUG | INFO | WARNING | ERROR
-   *		<CONTENT> = <FUNCTION/MODULE>: <APPLICATION_MESSAGE>
-   */
-  if (g_log_options.prefix_fields_flag == CLOGGING_PREFIX_DEFAULT) {
-    /* optimization for default setting */
-    rc = fprintf(stderr, "%s %s %s%s[%d] %s %s(%d): %s\n", time_str, g_hostname,
-                 g_progname, g_threadname, g_pid, level_str, funcname, linenum,
-                 msg);
-  } else {
-    /* Build prefix based on prefix_fields_flag */
-    char prefix[512] = {0};
-    int prefix_len = 0;
-    
-    if (g_log_options.prefix_fields_flag & CLOGGING_PREFIX_TIMESTAMP) {
-      prefix_len += snprintf(prefix + prefix_len, sizeof(prefix) - prefix_len, "%s ", time_str);
-    }
-    if (g_log_options.prefix_fields_flag & CLOGGING_PREFIX_HOSTNAME) {
-      prefix_len += snprintf(prefix + prefix_len, sizeof(prefix) - prefix_len, "%s ", g_hostname);
-    }
-    if (g_log_options.prefix_fields_flag & CLOGGING_PREFIX_PROGNAME) {
-      prefix_len += snprintf(prefix + prefix_len, sizeof(prefix) - prefix_len, "%s", g_progname);
-    }
-    if (g_log_options.prefix_fields_flag & CLOGGING_PREFIX_PID) {
-      prefix_len += snprintf(prefix + prefix_len, sizeof(prefix) - prefix_len, "%s[%d]", g_threadname, g_pid);
-    } else if (g_log_options.prefix_fields_flag & CLOGGING_PREFIX_PROGNAME) {
-      prefix_len += snprintf(prefix + prefix_len, sizeof(prefix) - prefix_len, "%s", g_threadname);
-    }
-    if (g_log_options.prefix_fields_flag & CLOGGING_PREFIX_LOGLEVEL) {
-      prefix_len += snprintf(prefix + prefix_len, sizeof(prefix) - prefix_len, " %s", level_str);
-    }
-    
-    char content_prefix[128] = {0};
-    int content_len = 0;
-    if (g_log_options.prefix_fields_flag & CLOGGING_PREFIX_FUNCNAME) {
-      content_len += snprintf(content_prefix + content_len, sizeof(content_prefix) - content_len, "%s", funcname);
-    }
-    if (g_log_options.prefix_fields_flag & CLOGGING_PREFIX_LINENUM) {
-      content_len += snprintf(content_prefix + content_len, sizeof(content_prefix) - content_len, "(%d)", linenum);
-    }
-    
-    if (prefix_len > 0) {
-      if (content_len > 0) {
-        rc = fprintf(stderr, "%s %s: %s\n", prefix, content_prefix, msg);
-      } else {
-        rc = fprintf(stderr, "%s %s\n", prefix, msg);
-      }
+  /* JSON format output if enabled */
+  if (g_log_options.json) {
+    if (g_log_options.prefix_fields_flag == CLOGGING_PREFIX_DEFAULT) {
+      /* optimization for default setting */
+      rc = fprintf(stderr,
+                   "{\"timestamp\":\"%s\", \"hostname\":\"%s\", \"progname\":\"%s\", \"threadname\":\"%s\", \"pid\":%d, \"level\":\"%s\", \"funcname\":\"%s\", \"linenum\":%d, \"message\":\"%s\"}\n",
+                   time_str, g_hostname, g_progname, g_threadname, g_pid, level_str, funcname, linenum, msg);
     } else {
-      if (content_len > 0) {
-        rc = fprintf(stderr, "%s: %s\n", content_prefix, msg);
+      /* Build JSON object: {"timestamp":"...", "hostname":"...", ...} */
+      char json_line[1024] = {0};
+      int json_pos = 0;
+      
+      /* Start JSON object */
+      json_pos += snprintf(json_line + json_pos, sizeof(json_line) - json_pos, "{");
+      
+      /* Add timestamp if enabled */
+      if (g_log_options.prefix_fields_flag & CLOGGING_PREFIX_TIMESTAMP) {
+        json_pos += snprintf(json_line + json_pos, sizeof(json_line) - json_pos, "\"timestamp\":\"%s\"", time_str);
+      }
+      
+      /* Add hostname if enabled */
+      if (g_log_options.prefix_fields_flag & CLOGGING_PREFIX_HOSTNAME) {
+        if (json_pos > 1) json_pos += snprintf(json_line + json_pos, sizeof(json_line) - json_pos, ",");
+        json_pos += snprintf(json_line + json_pos, sizeof(json_line) - json_pos, "\"hostname\":\"%s\"", g_hostname);
+      }
+      
+      /* Add program name if enabled */
+      if (g_log_options.prefix_fields_flag & CLOGGING_PREFIX_PROGNAME) {
+        if (json_pos > 1) json_pos += snprintf(json_line + json_pos, sizeof(json_line) - json_pos, ",");
+        json_pos += snprintf(json_line + json_pos, sizeof(json_line) - json_pos, "\"progname\":\"%s\"", g_progname);
+      }
+      
+      /* Add thread name if enabled (along with PID or as separate field) */
+      if ((g_log_options.prefix_fields_flag & CLOGGING_PREFIX_PID) ||
+          (g_log_options.prefix_fields_flag & CLOGGING_PREFIX_PROGNAME)) {
+        if (json_pos > 1) json_pos += snprintf(json_line + json_pos, sizeof(json_line) - json_pos, ",");
+        json_pos += snprintf(json_line + json_pos, sizeof(json_line) - json_pos, "\"threadname\":\"%s\"", g_threadname);
+      }
+      
+      /* Add PID if enabled */
+      if (g_log_options.prefix_fields_flag & CLOGGING_PREFIX_PID) {
+        if (json_pos > 1) json_pos += snprintf(json_line + json_pos, sizeof(json_line) - json_pos, ",");
+        json_pos += snprintf(json_line + json_pos, sizeof(json_line) - json_pos, "\"pid\":%d", g_pid);
+      }
+      
+      /* Add log level if enabled */
+      if (g_log_options.prefix_fields_flag & CLOGGING_PREFIX_LOGLEVEL) {
+        if (json_pos > 1) json_pos += snprintf(json_line + json_pos, sizeof(json_line) - json_pos, ",");
+        json_pos += snprintf(json_line + json_pos, sizeof(json_line) - json_pos, "\"level\":\"%s\"", level_str);
+      }
+      
+      /* Add function name if enabled */
+      if (g_log_options.prefix_fields_flag & CLOGGING_PREFIX_FUNCNAME) {
+        if (json_pos > 1) json_pos += snprintf(json_line + json_pos, sizeof(json_line) - json_pos, ",");
+        json_pos += snprintf(json_line + json_pos, sizeof(json_line) - json_pos, "\"funcname\":\"%s\"", funcname);
+      }
+      
+      /* Add line number if enabled */
+      if (g_log_options.prefix_fields_flag & CLOGGING_PREFIX_LINENUM) {
+        if (json_pos > 1) json_pos += snprintf(json_line + json_pos, sizeof(json_line) - json_pos, ",");
+        json_pos += snprintf(json_line + json_pos, sizeof(json_line) - json_pos, "\"linenum\":%d", linenum);
+      }
+      
+      /* Add message */
+      if (json_pos > 1) json_pos += snprintf(json_line + json_pos, sizeof(json_line) - json_pos, ",");
+      json_pos += snprintf(json_line + json_pos, sizeof(json_line) - json_pos, "\"message\":\"%s\"", msg);
+      
+      /* Close JSON object */
+      json_pos += snprintf(json_line + json_pos, sizeof(json_line) - json_pos, "}");
+      
+      rc = fprintf(stderr, "%s\n", json_line);
+    }
+  } else {
+    /* <HEADER> <MESSAGE>
+     *	<HEADER> = <TIMESTAMP> <HOSTNAME>
+     *	<MESSAGE> = <TAG> <LEVEL> <CONTENT>
+     *		<TAG> = <PROGRAM><THREAD>[<PID>]
+     *		<LEVEL> = DEBUG | INFO | WARNING | ERROR
+     *		<CONTENT> = <FUNCTION/MODULE>: <APPLICATION_MESSAGE>
+     */
+    if (g_log_options.prefix_fields_flag == CLOGGING_PREFIX_DEFAULT) {
+      /* optimization for default setting */
+      rc = fprintf(stderr, "%s %s %s%s[%d] %s %s(%d): %s\n", time_str, g_hostname,
+                   g_progname, g_threadname, g_pid, level_str, funcname, linenum,
+                   msg);
+    } else {
+      /* Build prefix based on prefix_fields_flag */
+      char prefix[512] = {0};
+      int prefix_len = 0;
+      
+      if (g_log_options.prefix_fields_flag & CLOGGING_PREFIX_TIMESTAMP) {
+        prefix_len += snprintf(prefix + prefix_len, sizeof(prefix) - prefix_len, "%s ", time_str);
+      }
+      if (g_log_options.prefix_fields_flag & CLOGGING_PREFIX_HOSTNAME) {
+        prefix_len += snprintf(prefix + prefix_len, sizeof(prefix) - prefix_len, "%s ", g_hostname);
+      }
+      if (g_log_options.prefix_fields_flag & CLOGGING_PREFIX_PROGNAME) {
+        prefix_len += snprintf(prefix + prefix_len, sizeof(prefix) - prefix_len, "%s", g_progname);
+      }
+      if (g_log_options.prefix_fields_flag & CLOGGING_PREFIX_PID) {
+        prefix_len += snprintf(prefix + prefix_len, sizeof(prefix) - prefix_len, "%s[%d]", g_threadname, g_pid);
+      } else if (g_log_options.prefix_fields_flag & CLOGGING_PREFIX_PROGNAME) {
+        prefix_len += snprintf(prefix + prefix_len, sizeof(prefix) - prefix_len, "%s", g_threadname);
+      }
+      if (g_log_options.prefix_fields_flag & CLOGGING_PREFIX_LOGLEVEL) {
+        prefix_len += snprintf(prefix + prefix_len, sizeof(prefix) - prefix_len, " %s", level_str);
+      }
+      
+      char content_prefix[128] = {0};
+      int content_len = 0;
+      if (g_log_options.prefix_fields_flag & CLOGGING_PREFIX_FUNCNAME) {
+        content_len += snprintf(content_prefix + content_len, sizeof(content_prefix) - content_len, "%s", funcname);
+      }
+      if (g_log_options.prefix_fields_flag & CLOGGING_PREFIX_LINENUM) {
+        content_len += snprintf(content_prefix + content_len, sizeof(content_prefix) - content_len, "(%d)", linenum);
+      }
+      
+      if (prefix_len > 0) {
+        if (content_len > 0) {
+          rc = fprintf(stderr, "%s %s: %s\n", prefix, content_prefix, msg);
+        } else {
+          rc = fprintf(stderr, "%s %s\n", prefix, msg);
+        }
       } else {
-        rc = fprintf(stderr, "%s\n", msg);
+        if (content_len > 0) {
+          rc = fprintf(stderr, "%s: %s\n", content_prefix, msg);
+        } else {
+          rc = fprintf(stderr, "%s\n", msg);
+        }
       }
     }
   }
