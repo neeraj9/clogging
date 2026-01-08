@@ -21,7 +21,7 @@ following to get started.
 
     int main(int argc, char *argv[])
     {
-        BASIC_INIT_LOGGING(argv[0], 256, "", 0, LOG_LEVEL_DEBUG);
+        BASIC_INIT_LOGGING(argv[0], 255, "", 0, LOG_LEVEL_DEBUG);
         BASIC_LOG_DEBUG("A basic debug log looks like this");
         return 0;
     }
@@ -62,7 +62,7 @@ The main application code will now look like as follows:
     int main(int argc, char *argv[])
     {
         /* the second argument is the total size of the buffer including null byte */
-        INIT_LOGGING(argv[0], 256, "", 0, LOG_LEVEL_DEBUG);
+        INIT_LOGGING(argv[0], 255, "", 0, LOG_LEVEL_DEBUG);
         LOG_DEBUG("A basic debug log looks like this");
         return 0;
     }
