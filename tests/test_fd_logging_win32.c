@@ -30,7 +30,7 @@ int main(int argc, char *argv[]) {
 
   /* printf("pname = %s\n", pname); */
   /* printf("argv[0] = %s\n", argv[0]); */
-  FD_INIT_LOGGING(pname, MAX_SIZE, "", 0, LOG_LEVEL_DEBUG, clogging_create_handle_from_fd(fd));
+  FD_INIT_LOGGING(pname, MAX_SIZE, "", 0, LOG_LEVEL_DEBUG, clogging_create_handle_from_fd(fd), NULL);
   FD_LOG_DEBUG("A fd debug log looks like this");
   assert(FD_GET_LOG_LEVEL() == LOG_LEVEL_DEBUG);
   FD_SET_LOG_LEVEL(LOG_LEVEL_INFO);

@@ -11,7 +11,6 @@
 
 #include "binary_logging.h"
 
-#define INIT_LOGGING(pn, pnlen, tn, tnlen, level, fd) BINARY_INIT_LOGGING(pn, pnlen, tn, tnlen, level, fd)
 #define SET_LOG_LEVEL BINARY_SET_LOG_LEVEL
 #define GET_LOG_LEVEL BINARY_GET_LOG_LEVEL
 #define GET_NUM_DROPPED_MESSAGES BINARY_GET_NUM_DROPPED_MESSAGES

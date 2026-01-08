@@ -11,7 +11,6 @@
 
 #include "fd_logging.h"
 
-#define INIT_LOGGING(pn, pnlen, tn, tnlen, level, fd) FD_INIT_LOGGING(pn, pnlen, tn, tnlen, level, fd)
 #define SET_LOG_LEVEL FD_SET_LOG_LEVEL
 #define GET_LOG_LEVEL FD_GET_LOG_LEVEL
 #define GET_NUM_DROPPED_MESSAGES FD_GET_NUM_DROPPED_MESSAGES

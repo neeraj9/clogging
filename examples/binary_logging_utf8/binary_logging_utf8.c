@@ -24,7 +24,7 @@ int main(void) {
 #else
   stdout_handle = 1;
 #endif
-  INIT_LOGGING("binary_utf8_demo", 16 + 1, "", 0, LOG_LEVEL_INFO, stdout_handle);
+  BINARY_INIT_LOGGING("binary_utf8_demo", 16 + 1, "", 0, LOG_LEVEL_INFO, stdout_handle);
 
   /* Log ASCII text */
   LOG_INFO("Hello World!");

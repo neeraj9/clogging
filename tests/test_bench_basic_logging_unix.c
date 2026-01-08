@@ -38,7 +38,7 @@ void *work(void *data) {
   char threadname[MAX_THREADNAME_SIZE];
   int threadname_len = snprintf(threadname, MAX_THREADNAME_SIZE, "thread-%d", ctx->threadindex);
 
-  BASIC_INIT_LOGGING(ctx->processname, ctx->processname_len, threadname, threadname_len, LOG_LEVEL_INFO);
+  BASIC_INIT_LOGGING(ctx->processname, ctx->processname_len, threadname, threadname_len, LOG_LEVEL_INFO, NULL);
 
   for (i = 0; i < ctx->num_loops; ++i) {
     BASIC_LOG_INFO("Some log which gets printed to console.");
@@ -52,7 +52,7 @@ int runall(const char *pname, uint8_t pname_len, int num_processes, int num_thre
   long i;
   pid_t pid;
 
-  BASIC_INIT_LOGGING(pname, pname_len, "", 0, LOG_LEVEL_DEBUG);
+  BASIC_INIT_LOGGING(pname, pname_len, "", 0, LOG_LEVEL_DEBUG, NULL);
 
   BASIC_LOG_INFO("Benchmarking starts");
   BASIC_LOG_INFO("pname = %s, np = %d, nt = %d, nl = %d\n", pname,

@@ -77,6 +77,12 @@ static THREAD_LOCAL clogging_handle_t g_fd_handle = 2; /* stderr fd is default a
 #endif
 static THREAD_LOCAL int g_fd_prefix_length = 0; /* 1 when prefix length to log
                                                entry */
+/* Logging options */
+static THREAD_LOCAL clogging_log_options_t g_fd_log_options = {
+  .color = 0,
+  .json = 0,
+  .prefix_fields_flag = CLOGGING_PREFIX_DEFAULT
+};
 /* safeguard calling init_logging multiple times */
 static THREAD_LOCAL int g_fd_is_logging_initialized = 0;
 
@@ -98,7 +104,8 @@ static THREAD_LOCAL uint64_t g_fd_num_msg_drops = 0;
 
 int clogging_fd_init(const char *progname, uint8_t progname_len,
                      const char *threadname, uint8_t threadname_len,
-                     enum LogLevel level, clogging_handle_t handle) {
+                     enum LogLevel level, clogging_handle_t handle,
+                     const clogging_log_options_t *opts) {
   if (g_fd_is_logging_initialized > 0) {
     fprintf(stderr, "logging is already initialized or in the"
                     " process of initialization.\n");
@@ -141,6 +148,16 @@ int clogging_fd_init(const char *progname, uint8_t progname_len,
 #endif
   g_fd_level = level;
   g_fd_handle = handle;
+
+  /* Store logging options */
+  if (opts != NULL) {
+    g_fd_log_options = *opts;
+  } else {
+    /* Use defaults */
+    g_fd_log_options.color = 0;
+    g_fd_log_options.json = 0;
+    g_fd_log_options.prefix_fields_flag = CLOGGING_PREFIX_DEFAULT;
+  }
 
   /* determine the type of handle and set prefix length accordingly */
   if (clogging_handle_is_socket(handle) == 1) {
@@ -250,11 +267,64 @@ void clogging_fd_logmsg(const char *funcname, int linenum, enum LogLevel level,
    *		<LEVEL> = DEBUG | INFO | WARNING | ERROR
    *		<CONTENT> = <FUNCTION/MODULE>: <APPLICATION_MESSAGE>
    */
-  /* leave the first two bytes for size */
-  len = snprintf(&g_fd_total_message[msg_offset], TOTAL_MSG_BYTES - msg_offset,
-                 "%s %s %s%s[%d] %s %s(%d): %s\n", time_str, g_fd_hostname,
-                 g_fd_progname, g_fd_threadname, g_fd_pid, level_str, funcname,
-                 linenum, msg);
+  if (g_fd_log_options.prefix_fields_flag = CLOGGING_PREFIX_DEFAULT) {
+    /* optimization for default setting */
+    len = snprintf(&g_fd_total_message[msg_offset], TOTAL_MSG_BYTES - msg_offset,
+                   "%s %s %s%s[%d] %s %s(%d): %s\n", time_str, g_fd_hostname,
+                   g_fd_progname, g_fd_threadname, g_fd_pid, level_str, funcname,
+                   linenum, msg);
+  } else {
+    /* Build prefix based on prefix_fields_flag */
+    char prefix[512] = {0};
+    int prefix_len = 0;
+    
+    if (g_fd_log_options.prefix_fields_flag & CLOGGING_PREFIX_TIMESTAMP) {
+      prefix_len += snprintf(prefix + prefix_len, sizeof(prefix) - prefix_len, "%s ", time_str);
+    }
+    if (g_fd_log_options.prefix_fields_flag & CLOGGING_PREFIX_HOSTNAME) {
+      prefix_len += snprintf(prefix + prefix_len, sizeof(prefix) - prefix_len, "%s ", g_fd_hostname);
+    }
+    if (g_fd_log_options.prefix_fields_flag & CLOGGING_PREFIX_PROGNAME) {
+      prefix_len += snprintf(prefix + prefix_len, sizeof(prefix) - prefix_len, "%s", g_fd_progname);
+    }
+    if (g_fd_log_options.prefix_fields_flag & CLOGGING_PREFIX_PID) {
+      prefix_len += snprintf(prefix + prefix_len, sizeof(prefix) - prefix_len, "%s[%d]", g_fd_threadname, g_fd_pid);
+    } else if (g_fd_log_options.prefix_fields_flag & CLOGGING_PREFIX_PROGNAME) {
+      prefix_len += snprintf(prefix + prefix_len, sizeof(prefix) - prefix_len, "%s", g_fd_threadname);
+    }
+    if (g_fd_log_options.prefix_fields_flag & CLOGGING_PREFIX_LOGLEVEL) {
+      prefix_len += snprintf(prefix + prefix_len, sizeof(prefix) - prefix_len, " %s", level_str);
+    }
+    
+    char content_prefix[128] = {0};
+    int content_len = 0;
+    if (g_fd_log_options.prefix_fields_flag & CLOGGING_PREFIX_FUNCNAME) {
+      content_len += snprintf(content_prefix + content_len, sizeof(content_prefix) - content_len, "%s", funcname);
+    }
+    if (g_fd_log_options.prefix_fields_flag & CLOGGING_PREFIX_LINENUM) {
+      content_len += snprintf(content_prefix + content_len, sizeof(content_prefix) - content_len, "(%d)", linenum);
+    }
+    
+    /* leave the first two bytes for size */
+    if (prefix_len > 0) {
+      if (content_len > 0) {
+        len = snprintf(&g_fd_total_message[msg_offset], TOTAL_MSG_BYTES - msg_offset,
+                      "%s %s: %s\n", prefix, content_prefix, msg);
+      } else {
+        len = snprintf(&g_fd_total_message[msg_offset], TOTAL_MSG_BYTES - msg_offset,
+                      "%s %s\n", prefix, msg);
+      }
+    } else {
+      if (content_len > 0) {
+        len = snprintf(&g_fd_total_message[msg_offset], TOTAL_MSG_BYTES - msg_offset,
+                      "%s: %s\n", content_prefix, msg);
+      } else {
+        len = snprintf(&g_fd_total_message[msg_offset], TOTAL_MSG_BYTES - msg_offset,
+                      "%s\n", msg);
+      }
+    }
+  }
+  
   if (len < 0) {
     /* there is nothing much we can do, so return.  */
     ++g_fd_num_msg_drops;

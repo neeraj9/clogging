@@ -25,8 +25,8 @@
  * but validation and conversion utilities won't be available.
  */
 
-#define BASIC_INIT_LOGGING(pn, pnlen, tn, tnlen, level)                        \
-  clogging_basic_init((pn), (pnlen), (tn), (tnlen), (level))
+#define BASIC_INIT_LOGGING(pn, pnlen, tn, tnlen, level, opts)                   \
+  clogging_basic_init((pn), (pnlen), (tn), (tnlen), (level), (opts))
 #define BASIC_SET_LOG_LEVEL(level) clogging_basic_set_loglevel(level)
 #define BASIC_GET_LOG_LEVEL() clogging_basic_get_loglevel()
 #define BASIC_GET_NUM_DROPPED_MESSAGES()                                       \
@@ -65,10 +65,13 @@ extern "C" {
  * 
  * progname is of maximum length of progname_len bytes including null terminator.
  * threadname is of maximum length of threadname_len bytes including null terminator.
+ * 
+ * opts is a pointer to clogging_log_options_t structure that configures logging behavior
+ * (color output, JSON/JSONL format, prefix fields). Can be NULL to use defaults.
  */
 int clogging_basic_init(const char *progname, uint8_t progname_len,
                         const char *threadname, uint8_t threadname_len,
-                        enum LogLevel level);
+                        enum LogLevel level, const clogging_log_options_t *opts);
 
 /*
  * It is a MT safe implementation.

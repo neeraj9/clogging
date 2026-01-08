@@ -56,6 +56,12 @@ static THREAD_LOCAL char g_threadname[MAX_PROG_NAME_LEN] = {0};
 static THREAD_LOCAL char g_hostname[MAX_HOSTNAME_LEN] = {0};
 static THREAD_LOCAL int g_pid = 0;
 static THREAD_LOCAL enum LogLevel g_level = DEFAULT_LOG_LEVEL;
+/* Logging options */
+static THREAD_LOCAL clogging_log_options_t g_log_options = {
+  .color = 0,
+  .json = 0,
+  .prefix_fields_flag = CLOGGING_PREFIX_DEFAULT
+};
 /* safeguard calling init_logging multiple times */
 static THREAD_LOCAL int g_is_logging_initialized = 0;
 
@@ -66,7 +72,7 @@ static THREAD_LOCAL uint64_t g_basic_num_msg_drops = 0;
 
 int clogging_basic_init(const char *progname, uint8_t progname_len,
                         const char *threadname, uint8_t threadname_len,
-                        enum LogLevel level) {
+                        enum LogLevel level, const clogging_log_options_t *opts) {
   if (g_is_logging_initialized > 0) {
     fprintf(stderr, "logging is already initialized or in the"
                     " process of initialization.\n");
@@ -108,6 +114,16 @@ int clogging_basic_init(const char *progname, uint8_t progname_len,
   g_pid = (int)getpid();
 #endif
   g_level = level;
+
+  /* Store logging options */
+  if (opts != NULL) {
+    g_log_options = *opts;
+  } else {
+    /* Use defaults */
+    g_log_options.color = 0;
+    g_log_options.json = 0;
+    g_log_options.prefix_fields_flag = CLOGGING_PREFIX_DEFAULT;
+  }
 
   return 0;
 }
@@ -170,9 +186,58 @@ void clogging_basic_logmsg(const char *funcname, int linenum,
    *		<LEVEL> = DEBUG | INFO | WARNING | ERROR
    *		<CONTENT> = <FUNCTION/MODULE>: <APPLICATION_MESSAGE>
    */
-  rc = fprintf(stderr, "%s %s %s%s[%d] %s %s(%d): %s\n", time_str, g_hostname,
-               g_progname, g_threadname, g_pid, level_str, funcname, linenum,
-               msg);
+  if (g_log_options.prefix_fields_flag == CLOGGING_PREFIX_DEFAULT) {
+    /* optimization for default setting */
+    rc = fprintf(stderr, "%s %s %s%s[%d] %s %s(%d): %s\n", time_str, g_hostname,
+                 g_progname, g_threadname, g_pid, level_str, funcname, linenum,
+                 msg);
+  } else {
+    /* Build prefix based on prefix_fields_flag */
+    char prefix[512] = {0};
+    int prefix_len = 0;
+    
+    if (g_log_options.prefix_fields_flag & CLOGGING_PREFIX_TIMESTAMP) {
+      prefix_len += snprintf(prefix + prefix_len, sizeof(prefix) - prefix_len, "%s ", time_str);
+    }
+    if (g_log_options.prefix_fields_flag & CLOGGING_PREFIX_HOSTNAME) {
+      prefix_len += snprintf(prefix + prefix_len, sizeof(prefix) - prefix_len, "%s ", g_hostname);
+    }
+    if (g_log_options.prefix_fields_flag & CLOGGING_PREFIX_PROGNAME) {
+      prefix_len += snprintf(prefix + prefix_len, sizeof(prefix) - prefix_len, "%s", g_progname);
+    }
+    if (g_log_options.prefix_fields_flag & CLOGGING_PREFIX_PID) {
+      prefix_len += snprintf(prefix + prefix_len, sizeof(prefix) - prefix_len, "%s[%d]", g_threadname, g_pid);
+    } else if (g_log_options.prefix_fields_flag & CLOGGING_PREFIX_PROGNAME) {
+      prefix_len += snprintf(prefix + prefix_len, sizeof(prefix) - prefix_len, "%s", g_threadname);
+    }
+    if (g_log_options.prefix_fields_flag & CLOGGING_PREFIX_LOGLEVEL) {
+      prefix_len += snprintf(prefix + prefix_len, sizeof(prefix) - prefix_len, " %s", level_str);
+    }
+    
+    char content_prefix[128] = {0};
+    int content_len = 0;
+    if (g_log_options.prefix_fields_flag & CLOGGING_PREFIX_FUNCNAME) {
+      content_len += snprintf(content_prefix + content_len, sizeof(content_prefix) - content_len, "%s", funcname);
+    }
+    if (g_log_options.prefix_fields_flag & CLOGGING_PREFIX_LINENUM) {
+      content_len += snprintf(content_prefix + content_len, sizeof(content_prefix) - content_len, "(%d)", linenum);
+    }
+    
+    if (prefix_len > 0) {
+      if (content_len > 0) {
+        rc = fprintf(stderr, "%s %s: %s\n", prefix, content_prefix, msg);
+      } else {
+        rc = fprintf(stderr, "%s %s\n", prefix, msg);
+      }
+    } else {
+      if (content_len > 0) {
+        rc = fprintf(stderr, "%s: %s\n", content_prefix, msg);
+      } else {
+        rc = fprintf(stderr, "%s\n", msg);
+      }
+    }
+  }
+  
   /* ignore the error if it's there */
   if (rc < 0) {
     ++g_basic_num_msg_drops;

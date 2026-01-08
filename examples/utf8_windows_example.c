@@ -23,7 +23,7 @@ int main(void) {
   clogging_init_utf8_console();
 
   /* Initialize logging with UTF-8 support enabled */
-  INIT_LOGGING("utf8_win_demo", 13 + 1, "", 0, LOG_LEVEL_INFO);
+  BASIC_INIT_LOGGING("utf8_win_demo", 13 + 1, "", 0, LOG_LEVEL_INFO, NULL);
 
   /* Get Windows user name (returns UTF-16) */
   printf("Getting Windows user name...\n");

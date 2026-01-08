@@ -68,6 +68,32 @@ enum LogLevel {
  */
 #define DEFAULT_LOG_LEVEL LOG_LEVEL_INFO
 
+/* Log output prefix field flags (bitmap).
+ * These flags control which fields are included in the log line prefix.
+ */
+#define CLOGGING_PREFIX_TIMESTAMP  0x01  /* Include timestamp in prefix */
+#define CLOGGING_PREFIX_HOSTNAME   0x02  /* Include hostname in prefix */
+#define CLOGGING_PREFIX_PROGNAME   0x04  /* Include program name in prefix */
+#define CLOGGING_PREFIX_PID        0x08  /* Include process ID in prefix */
+#define CLOGGING_PREFIX_LOGLEVEL   0x10  /* Include log level in prefix */
+#define CLOGGING_PREFIX_FUNCNAME   0x20  /* Include function name in prefix */
+#define CLOGGING_PREFIX_LINENUM    0x40  /* Include line number in prefix */
+
+/* Default prefix fields: include all */
+#define CLOGGING_PREFIX_DEFAULT (CLOGGING_PREFIX_TIMESTAMP | CLOGGING_PREFIX_HOSTNAME | \
+                                CLOGGING_PREFIX_PROGNAME | CLOGGING_PREFIX_PID | \
+                                CLOGGING_PREFIX_LOGLEVEL | CLOGGING_PREFIX_FUNCNAME | \
+                                CLOGGING_PREFIX_LINENUM)
+
+/* Logging options structure
+ * This structure is passed to init functions to configure logging behavior.
+ */
+typedef struct {
+  uint8_t color;               /* 1 to enable colored output, 0 to disable */
+  uint8_t json;                /* 1 to enable JSONL output, 0 to disable */
+  uint8_t prefix_fields_flag;  /* Bitmap of prefix fields to display (use CLOGGING_PREFIX_* flags) */
+} clogging_log_options_t;
+
 /* Platform-agnostic file descriptor/handle type for cross-platform I/O.
  *
  * On Unix/Linux: Simple int file descriptor

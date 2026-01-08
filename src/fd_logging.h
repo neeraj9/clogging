@@ -25,8 +25,8 @@
  * but validation and conversion utilities won't be available.
  */
 
-#define FD_INIT_LOGGING(pn, pnlen, tn, tnlen, level, fd)                       \
-  clogging_fd_init((pn), (pnlen), (tn), (tnlen), (level), (fd))
+#define FD_INIT_LOGGING(pn, pnlen, tn, tnlen, level, fd, opts)                  \
+  clogging_fd_init((pn), (pnlen), (tn), (tnlen), (level), (fd), (opts))
 #define FD_SET_LOG_LEVEL(level) clogging_fd_set_loglevel(level)
 #define FD_GET_LOG_LEVEL() clogging_fd_get_loglevel()
 #define FD_GET_NUM_DROPPED_MESSAGES() clogging_fd_get_num_dropped_messages()
@@ -66,10 +66,14 @@ extern "C" {
  * 
  * progname is of maximum length of progname_len bytes including null terminator.
  * threadname is of maximum length of threadname_len bytes including null terminator.
+ * 
+ * opts is a pointer to clogging_log_options_t structure that configures logging behavior
+ * (color output, JSON/JSONL format, prefix fields). Can be NULL to use defaults.
  */
 int clogging_fd_init(const char *progname, uint8_t progname_len,
                      const char *threadname, uint8_t threadname_len,
-                     enum LogLevel level, clogging_handle_t handle);
+                     enum LogLevel level, clogging_handle_t handle,
+                     const clogging_log_options_t *opts);
 
 /* Backward compatibility macro for old int-based API.
  * Converts int fd to clogging_handle_t automatically.

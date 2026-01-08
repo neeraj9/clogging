@@ -44,7 +44,7 @@ void *work(void *data) {
   char threadname[MAX_THREADNAME_SIZE];
   int threadname_len = snprintf(threadname, MAX_THREADNAME_SIZE, "thread-%d", ctx->threadindex);
 
-  FD_INIT_LOGGING(ctx->processname, ctx->processname_len, threadname, threadname_len, LOG_LEVEL_INFO, clogging_create_handle_from_fd(ctx->fd));
+  FD_INIT_LOGGING(ctx->processname, ctx->processname_len, threadname, threadname_len, LOG_LEVEL_INFO, clogging_create_handle_from_fd(ctx->fd), NULL);
 
   for (i = 0; i < ctx->num_loops; ++i) {
     FD_LOG_INFO("Some log which gets printed to console.");
@@ -58,7 +58,7 @@ int runall(const char *pname, uint8_t processname_len, int num_processes, int nu
   long i;
   pid_t pid;
 
-  FD_INIT_LOGGING(pname, processname_len, "", 0, LOG_LEVEL_DEBUG, clogging_create_handle_from_fd(fd));
+  FD_INIT_LOGGING(pname, processname_len, "", 0, LOG_LEVEL_DEBUG, clogging_create_handle_from_fd(fd), NULL);
 
   FD_LOG_INFO("Benchmarking starts");
   FD_LOG_INFO("pname = %s, np = %d, nt = %d, nl = %d\n", pname, num_processes,
