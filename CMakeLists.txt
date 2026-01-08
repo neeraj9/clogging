@@ -16,7 +16,9 @@ set(CMAKE_C_EXTENSIONS ON)  # Enable gnu99 extensions
 
 # Options
 option(BUILD_TESTS "Build test executables" ON)
+option(BUILD_EXAMPLES "Build example programs" ON)
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
+option(BUILD_STATIC_LIBS "Build static libraries" ON)
 option(CLOGGING_USE_UTF8_STRINGS "Enable UTF-8 string validation and utilities" ON)
 
 # Find required packages
@@ -71,6 +73,10 @@ add_subdirectory(src)
 if(BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
+endif()
+
+if(BUILD_EXAMPLES)
+    add_subdirectory(examples)
 endif()
 
 # Installation of CMake config files
