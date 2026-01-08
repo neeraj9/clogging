@@ -469,22 +469,19 @@ static int fill_variable_arguments(char *store, int offset, const char *format,
     case 'G':
     case 'a':
     case 'A': /* double */
-      /*
-       * The IEEE 754 specifies the following encoding.
-       * This is just for reference rather than anything else.
-       *
-       * +==========+===========+======+========+=======+=======+==========+===========+
-       * | Name     | Precision | Base | Digits | E min | E max | Decimal  |
-       * Decimal   | |          |           |      |        |       |       |
-       * digits   | E max     |
-       * +==========+===========+======+========+=======+=======+==========+===========+
-       * | binary64 | Double    | 2    | 53     | −1022 | +1023 | 15.95    |
-       * 307.95    |
-       * +----------+-----------+------+--------+-------+-------+----------+-----------+
-       * | binary128|	Quadruple | 2    | 113    | −16382| +16383| 34.02    |
-       * 4931.77   |
-       * +----------+-----------+------+--------+-------+-------+----------+-----------+
-       * */
+/*
+  * The IEEE 754 specifies the following encoding.
+  * This is just for reference rather than anything else.
+  *
+  * +==========+===========+======+========+=======+=======+==========+===========+
+  * | Name     | Precision | Base | Digits | E min | E max | Decimal  | Decimal   |
+  * |          |           |      |        |       |       | digits   | E max     |
+  * +==========+===========+======+========+=======+=======+==========+===========+
+  * | binary64 | Double    | 2    | 53     | −1022 | +1023 | 15.95    | 307.95    |
+  * +----------+-----------+------+--------+-------+-------+----------+-----------+
+  * | binary128|Quadruple  | 2    | 113    | −16382| +16383| 34.02    | 4931.77   |
+  * +----------+-----------+------+--------+-------+-------+----------+-----------+
+  * */
       store[offset++] = BINARY_LOG_VAR_ARG_DOUBLE & 0x00ff;
       if (lspecifier == LS_CAP_L) {
         ldbl = va_arg(ap, long double);
