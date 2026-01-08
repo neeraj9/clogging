@@ -115,7 +115,7 @@ static int fill_variable_arguments(char *store, int offset, const char *format,
  *
  * TODO FIXME: should we use htobe16(), htobe32() or htobe64() instead?
  */
-inline int portable_copy(char *store, int *offset, unsigned long long val,
+int portable_copy(char *store, int *offset, unsigned long long val,
                          ssize_t bytes) {
   int newoffset = *offset;
 
