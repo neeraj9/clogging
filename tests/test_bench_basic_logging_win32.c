@@ -51,7 +51,6 @@ static_assert(MAX_THREADNAME_SIZE < UINT8_MAX, "Thread name size exceeds uint8_t
 
 struct context {
   const char *processname;
-  uint8_t processname_len;
   int threadindex;
   int num_loops;
 };
@@ -59,11 +58,14 @@ struct context {
 DWORD WINAPI work(LPVOID data) {
   struct context *ctx = (struct context *)data;
   int i = 0;
-  char threadname[MAX_THREADNAME_SIZE];
+  char threadname[MAX_THREADNAME_SIZE] = {0};
   int threadname_len = snprintf(threadname, MAX_THREADNAME_SIZE, "thread-%d", ctx->threadindex);
-  assert(threadname_len > 0 && threadname_len < MAX_THREADNAME_SIZE);
+  if (threadname_len < 0 || threadname_len >= MAX_THREADNAME_SIZE) {
+    LOG_ERROR("snprintf() failed for thread name");
+    return data;
+  }
 
-  clogging_basic_init(ctx->processname, ctx->processname_len, threadname, (uint8_t)threadname_len, LOG_LEVEL_INFO, NULL);
+  clogging_basic_init(ctx->processname, threadname, LOG_LEVEL_INFO, NULL);
 
   for (i = 0; i < ctx->num_loops; ++i) {
     LOG_INFO("Some log which gets printed to console.");
@@ -71,7 +73,7 @@ DWORD WINAPI work(LPVOID data) {
   return 0;
 }
 
-int runall(const char *pname, uint8_t pname_len, int num_processes, int num_threads,
+int runall(const char *pname, int num_processes, int num_threads,
            int num_loops) {
   /* Windows implementation: no fork(), use threads only */
   int j = 0;
@@ -79,7 +81,7 @@ int runall(const char *pname, uint8_t pname_len, int num_processes, int num_thre
   struct context *thread_contexts =
       (struct context *)malloc(sizeof(struct context) * num_threads);
 
-  clogging_basic_init(pname, pname_len, "", 0, LOG_LEVEL_DEBUG, NULL);
+  clogging_basic_init(pname, "", LOG_LEVEL_DEBUG, NULL);
 
   LOG_INFO("Benchmarking starts");
   LOG_INFO("pname = %s, np = %d, nt = %d, nl = %d\n", pname,
@@ -134,7 +136,7 @@ int main(int argc, char **argv) {
     }
   }
 
-  runall(pname, (uint8_t)(strlen(pname) + 1), num_processes, num_threads, num_loops);
+  runall(pname, num_processes, num_threads, num_loops);
 
   return 0;
 }

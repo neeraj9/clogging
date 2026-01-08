@@ -23,7 +23,7 @@ int main(void) {
     .json = 1,
     .prefix_fields_flag = CLOGGING_PREFIX_DEFAULT
   };
-  clogging_fd_init("fd_utf8_demo", 12 + 1, "", 0, LOG_LEVEL_INFO, clogging_create_handle_from_fd(1), &opts);
+  clogging_fd_init("fd_utf8_demo", "", LOG_LEVEL_INFO, clogging_create_handle_from_fd(1), &opts);
 
   /* Log ASCII text */
   LOG_INFO("Hello World!");

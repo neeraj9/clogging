@@ -24,7 +24,7 @@ int main(void) {
 #else
   stdout_handle = 1;
 #endif
-  clogging_binary_init("binary_utf8_demo", 16 + 1, "", 0, LOG_LEVEL_INFO, stdout_handle);
+  clogging_binary_init("binary_utf8_demo", "", LOG_LEVEL_INFO, stdout_handle);
 
   /* Log ASCII text */
   LOG_INFO("Hello World!");

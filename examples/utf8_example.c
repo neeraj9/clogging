@@ -37,7 +37,7 @@ int main(void) {
   printf("====================\n\n");
 
   /* Initialize logging with UTF-8 support enabled */
-  clogging_basic_init("utf8_demo", 9 + 1, "", 0, LOG_LEVEL_INFO, NULL);
+  clogging_basic_init("utf8_demo", "", LOG_LEVEL_INFO, NULL);
 
   /* Log ASCII text */
   LOG_INFO("Hello World!");

@@ -21,7 +21,7 @@ int main(void) {
     .json = 1,
     .prefix_fields_flag = CLOGGING_PREFIX_DEFAULT
   };
-  clogging_basic_init("basic_utf8_demo", 15 + 1, "", 0, LOG_LEVEL_INFO, &opts);
+  clogging_basic_init("basic_utf8_demo", "", LOG_LEVEL_INFO, &opts);
 
   /* Log ASCII text */
   LOG_INFO("Hello World!");

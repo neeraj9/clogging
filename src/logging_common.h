@@ -142,6 +142,13 @@ typedef int clogging_handle_t;
 extern "C" {
 #endif
 
+/*
+ * Return the buffer size in bytes required to hold the string including
+ * the null terminator as uint8_t. The returned value is capped at UINT8_MAX.
+*/
+uint8_t clogging_str_capsize_u8(const char *str);
+
+
 /* Get the string representation of logging level.
  *
  * When LOGGING_WITH_THREAD_LOCAL_STORAGE is defined then this is a

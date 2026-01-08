@@ -187,8 +187,8 @@ int portable_copy(char *store, ssize_t *offset, unsigned long long val,
   return 0;
 }
 
-int clogging_binary_init(const char *progname, uint8_t progname_len,
-                         const char *threadname, uint8_t threadname_len,
+int clogging_binary_init(const char *progname,
+                         const char *threadname,
                          enum LogLevel level, clogging_handle_t handle) {
   if (g_binary_is_logging_initialized > 0) {
     fprintf(stderr, "logging is already initialized for current thread or in the"
@@ -210,10 +210,10 @@ int clogging_binary_init(const char *progname, uint8_t progname_len,
    */
   (void)get_log_level_as_cstring(LOG_LEVEL_ERROR);
 
-  clogging_strtcpy(g_binary_progname, progname, progname_len);
-  g_binary_progname_length = strlen(g_binary_progname) & 0x7f;
-  clogging_strtcpy(g_binary_threadname, threadname, threadname_len);
-  g_binary_threadname_length = strlen(g_binary_threadname) & 0x7f;
+  g_binary_progname_length = clogging_str_capsize_u8(progname);
+  clogging_strtcpy(g_binary_progname, progname, g_binary_progname_length);
+  g_binary_threadname_length = clogging_str_capsize_u8(threadname);
+  clogging_strtcpy(g_binary_threadname, threadname, g_binary_threadname_length);
 #ifdef _WIN32
   {
     DWORD size = MAX_HOSTNAME_LEN;

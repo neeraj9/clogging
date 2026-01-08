@@ -28,7 +28,7 @@ void* thread_function(void* arg) {
   thread_args_t* args = (thread_args_t*)arg;
   
   /* Initialize basic logging with UTF-8 support enabled for this thread */
-  clogging_basic_init(args->program_name, (uint8_t)(strlen(args->program_name) + 1), args->thread_name, 20 + 1, LOG_LEVEL_INFO, NULL);
+  clogging_basic_init(args->program_name, args->thread_name, LOG_LEVEL_INFO, NULL);
 
   LOG_INFO("--- Thread %d (%s) started ---", args->thread_id, args->thread_name);
 
@@ -61,7 +61,7 @@ int main(int argc, char *argv[]) {
   printf("Basic Multi-Thread Logging UTF-8 Example\n");
   printf("==========================================\n");
 
-  clogging_basic_init(argv[0], (uint8_t)(strlen(argv[0]) + 1), "-main", 5 + 1, LOG_LEVEL_INFO, NULL);
+  clogging_basic_init(argv[0], "-main", LOG_LEVEL_INFO, NULL);
   pthread_t thread1, thread2;
   thread_args_t args1 = {1, "thread_1_utf8", argv[0]};
   thread_args_t args2 = {2, "thread_2_utf8", argv[0]};

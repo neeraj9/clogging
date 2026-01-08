@@ -102,8 +102,8 @@ static THREAD_LOCAL char g_fd_previous_message[TOTAL_MSG_BYTES];
  */
 static THREAD_LOCAL uint64_t g_fd_num_msg_drops = 0;
 
-int clogging_fd_init(const char *progname, uint8_t progname_len,
-                     const char *threadname, uint8_t threadname_len,
+int clogging_fd_init(const char *progname,
+                     const char *threadname,
                      enum LogLevel level, clogging_handle_t handle,
                      const clogging_log_options_t *opts) {
   if (g_fd_is_logging_initialized > 0) {
@@ -126,8 +126,8 @@ int clogging_fd_init(const char *progname, uint8_t progname_len,
    */
   (void)get_log_level_as_cstring(LOG_LEVEL_ERROR);
 
-  clogging_strtcpy(g_fd_progname, progname, progname_len);
-  clogging_strtcpy(g_fd_threadname, threadname, threadname_len);
+  clogging_strtcpy(g_fd_progname, progname, clogging_str_capsize_u8(progname));
+  clogging_strtcpy(g_fd_threadname, threadname, clogging_str_capsize_u8(threadname));
 #ifdef _WIN32
   {
     DWORD size = MAX_HOSTNAME_LEN;

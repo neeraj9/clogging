@@ -70,8 +70,8 @@ static THREAD_LOCAL int g_is_logging_initialized = 0;
  */
 static THREAD_LOCAL uint64_t g_basic_num_msg_drops = 0;
 
-int clogging_basic_init(const char *progname, uint8_t progname_len,
-                        const char *threadname, uint8_t threadname_len,
+int clogging_basic_init(const char *progname,
+                        const char *threadname,
                         enum LogLevel level, const clogging_log_options_t *opts) {
   if (g_is_logging_initialized > 0) {
     fprintf(stderr, "logging is already initialized for current thread or in the"
@@ -93,8 +93,8 @@ int clogging_basic_init(const char *progname, uint8_t progname_len,
    */
   (void)get_log_level_as_cstring(LOG_LEVEL_ERROR);
 
-  clogging_strtcpy(g_progname, progname, progname_len);
-  clogging_strtcpy(g_threadname, threadname, threadname_len);
+  clogging_strtcpy(g_progname, progname, clogging_str_capsize_u8(progname));
+  clogging_strtcpy(g_threadname, threadname, clogging_str_capsize_u8(threadname));
 #ifdef _WIN32
   {
     DWORD size = MAX_HOSTNAME_LEN;

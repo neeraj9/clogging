@@ -55,7 +55,6 @@ typedef int socklen_t;
 
 struct context {
   const char *processname;
-  uint8_t processname_len;
   int threadindex;
   int num_loops;
   SOCKET fd;
@@ -64,11 +63,14 @@ struct context {
 DWORD WINAPI work(LPVOID data) {
   struct context *ctx = (struct context *)data;
   int i = 0;
-  char threadname[MAX_THREADNAME_SIZE];
+  char threadname[MAX_THREADNAME_SIZE] = {0};
   int threadname_len = snprintf(threadname, MAX_THREADNAME_SIZE, "thread-%d", ctx->threadindex);
-  assert(threadname_len > 0 && threadname_len < MAX_THREADNAME_SIZE);
+  if (threadname_len < 0 || threadname_len >= MAX_THREADNAME_SIZE) {
+    LOG_ERROR("snprintf() failed for thread name");
+    return data;
+  }
 
-  clogging_fd_init(ctx->processname, ctx->processname_len, threadname, (uint8_t)threadname_len, LOG_LEVEL_INFO, clogging_create_handle_from_fd((int)ctx->fd), NULL);
+  clogging_fd_init(ctx->processname, threadname, LOG_LEVEL_INFO, clogging_create_handle_from_fd((int)ctx->fd), NULL);
 
   for (i = 0; i < ctx->num_loops; ++i) {
     LOG_INFO("Some log which gets printed to console.");
@@ -76,7 +78,7 @@ DWORD WINAPI work(LPVOID data) {
   return 0;
 }
 
-int runall(const char *pname, uint8_t processname_len, int num_processes, int num_threads, int num_loops,
+int runall(const char *pname, int num_processes, int num_threads, int num_loops,
            SOCKET fd) {
   /* Windows implementation: no fork(), use threads only */
   int j = 0;
@@ -84,7 +86,7 @@ int runall(const char *pname, uint8_t processname_len, int num_processes, int nu
   struct context *thread_contexts =
       (struct context *)malloc(sizeof(struct context) * num_threads);
 
-  clogging_fd_init(pname, processname_len, "", 0, LOG_LEVEL_DEBUG, clogging_create_handle_from_fd((int)fd), NULL);
+  clogging_fd_init(pname, "", LOG_LEVEL_DEBUG, clogging_create_handle_from_fd((int)fd), NULL);
 
   LOG_INFO("Benchmarking starts");
   LOG_INFO("pname = %s, np = %d, nt = %d, nl = %d\n", pname, num_processes,
@@ -92,7 +94,6 @@ int runall(const char *pname, uint8_t processname_len, int num_processes, int nu
 
   for (j = 0; j < num_threads; j++) {
     thread_contexts[j].processname = pname;
-    thread_contexts[j].processname_len = processname_len;
     thread_contexts[j].threadindex = j;
     thread_contexts[j].num_loops = num_loops;
     thread_contexts[j].fd = fd;
@@ -256,7 +257,7 @@ int main(int argc, const char *argv[]) {
     }
   }
 
-  runall(pname, (uint8_t)(strlen(pname) + 1), num_processes, num_threads, num_loops, fd);
+  runall(pname, num_processes, num_threads, num_loops, fd);
 
   if (is_udp_testing) {
     char endmsg[] = "end-of-test";

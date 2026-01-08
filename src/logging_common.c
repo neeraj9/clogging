@@ -12,7 +12,7 @@
 
 #include "logging_common.h"
 
-#include <string.h>   /* strncpy() */
+#include <string.h>   /* strncpy(), strnlen() */
 #include <stdio.h>    /* snprintf() */
 #include <time.h>     /* gmtime_r() */
 #include <errno.h>    /* errno */
@@ -46,6 +46,10 @@ static inline struct tm *gmtime_r(const time_t *timep, struct tm *result) {
 #else
 #define THREAD_LOCAL __thread
 #endif
+
+uint8_t clogging_str_capsize_u8(const char *str) {
+  return (uint8_t)strnlen(str, UINT8_MAX - 1) + 1;
+}
 
 /*
  * Get the string representation of logging level.
