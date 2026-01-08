@@ -10,8 +10,7 @@
 #error This file is for Windows platforms only
 #endif /* !_WIN32 */
 
-#include "../src/binary_logging.h"
-#include "../src/logging_common.h" /* time_to_cstr() */
+#include "test_binary_logging_common.h"
 
 #ifndef __FILE__
 #error __FILE__ not defined
@@ -35,81 +34,11 @@ typedef int socklen_t;
 
 #define MAX_BUF_LEN 1024
 
-/* ISO 8601 date and time format with sec */
-#define MAX_TIME_STR_LEN 26
 
-#define MAX_NUM_VARIABLE_ARGS 20
 
-struct variable_arg {
-  enum VarArgType arg_type;
-  int bytes;
-  union {
-    unsigned long long int llval;
-    long double ldbl;
-    const char *s;
-    void *p;
-  };
-};
-
-int bigendian_to_native(const char *buf, int bytes, char *dst) {
-  int i = 0;
-  int is_little_endian = 0;
-
-  i = 1;
-  is_little_endian = (*((char *)&i)) & 0x00ff;
-  /* the input is in big-endian so convert
-   * appropriately.
-   */
-  if (is_little_endian) {
-    i = bytes - 1;
-    while (i >= 0) {
-      *dst = buf[i];
-      --i;
-      ++dst;
-    }
-  } else {
-    memcpy(dst, buf, bytes);
-  }
-  return 0;
-}
-
-int read_nbytes(const char *buf, int bytes, unsigned long long int *llval) {
-  switch (bytes) {
-  case 1:
-    *llval = buf[0] & 0x00ff;
-    break;
-  case 2:
-    *llval = ((buf[0] & 0x00ff) << 8) | (buf[1] & 0x00ff);
-    break;
-  case 4:
-    *llval = ((buf[0] & 0x00ff) << 24) | ((buf[1] & 0x00ff) << 16) |
-             ((buf[2] & 0x00ff) << 8) | (buf[3] & 0x00ff);
-    break;
-  case 8:
-    *llval = ((unsigned long long int)(buf[0] & 0x00ff) << 56) |
-             ((unsigned long long int)(buf[1] & 0x00ff) << 48) |
-             ((unsigned long long int)(buf[2] & 0x00ff) << 40) |
-             ((unsigned long long int)(buf[3] & 0x00ff) << 32) |
-             ((buf[4] & 0x00ff) << 24) | ((buf[5] & 0x00ff) << 16) |
-             ((buf[6] & 0x00ff) << 8) | (buf[7] & 0x00ff);
-    break;
-  default:
-    return -1;
-  }
-  return 0;
-}
-
-inline int read_length(const char *buf, int *offset, int *bytes) {
-  int val1 = buf[*offset];
-  if (val1 & 0x80) {
-    (*offset) += 1;
-    *bytes = val1 & 0x7f;
-    return 1;
-  } /* else */
-  *bytes = (val1 << 8) | (buf[(*offset) + 1] & 0x00ff);
-  (*offset) += 2;
-  return 2;
-}
+int bigendian_to_native(const char *buf, int bytes, char *dst);
+int read_nbytes(const char *buf, int bytes, unsigned long long int *llval);
+inline int read_length(const char *buf, int *offset, int *bytes);
 
 /* create udp server and return the socket fd */
 SOCKET create_udp_server(int port) {
@@ -166,160 +95,8 @@ SOCKET create_client_socket(const char *ip, int port) {
   return fd;
 }
 
-int analyze_received_binary_message(const char *msg, const char *buf,
-                                    int buflen) {
-  (void)msg;  /* unused parameter */
-  int msglen = 0;
-  time_t logtime;
-  char time_str[MAX_TIME_STR_LEN];
-  unsigned long long llval = 0LLU;
-  unsigned long long timeval = 0LLU;
-  const char *hostname = NULL;
-  int hostname_len = 0;
-  const char *programname = NULL;
-  int programname_len = 0;
-  const char *threadname = NULL;
-  int threadname_len = 0;
-  int pid = 0;
-  int loglevel = 0;
-  const char *filename = NULL;
-  int filename_len = 0;
-  const char *funcname = NULL;
-  int funcname_len = 0;
-  int linenum = 0;
-  int offset = 0;
-  int bytes = 0;
-  int rc = 0;
-  int i = 0;
-  struct variable_arg args[MAX_NUM_VARIABLE_ARGS];
-  int is_little_endian = 0;
-
-  /* determine the endianness */
-  rc = 1;
-  is_little_endian = (*((char *)&rc)) & 0x00ff;
-
-  printf("received buf[%d] = [", buflen);
-  for (i = 0; i < buflen; ++i) {
-    printf("%02x, ", buf[i] & 0x00ff);
-  }
-  printf("]\n");
-
-  /* <length> <timestamp> <hostname> <progname> <threadname> <pid> <loglevel>
-   *   <file> <func> <linenum> [<arg1>, <arg2>, ...]
-   */
-  rc = read_nbytes(&buf[offset], 2, &llval);
-  offset += 2;
-  msglen = (int)(llval & 0xffff);
-
-  rc = read_length(buf, &offset, &bytes);
-  rc = read_nbytes(&buf[offset], bytes, &timeval);
-  offset += bytes;
-
-  rc = read_length(buf, &offset, &hostname_len);
-  hostname = &buf[offset];
-  offset += hostname_len;
-
-  rc = read_length(buf, &offset, &programname_len);
-  programname = &buf[offset];
-  offset += programname_len;
-
-  rc = read_length(buf, &offset, &threadname_len);
-  threadname = &buf[offset];
-  offset += threadname_len;
-
-  rc = read_length(buf, &offset, &bytes);
-  rc = read_nbytes(&buf[offset], bytes, &llval);
-  pid = (int)llval;
-  offset += bytes;
-
-  rc = read_length(buf, &offset, &bytes);
-  rc = read_nbytes(&buf[offset], bytes, &llval);
-  loglevel = (int)llval;
-  offset += bytes;
-
-  rc = read_length(buf, &offset, &filename_len);
-  filename = &buf[offset];
-  offset += filename_len;
-
-  rc = read_length(buf, &offset, &funcname_len);
-  funcname = &buf[offset];
-  offset += funcname_len;
-
-  rc = read_length(buf, &offset, &bytes);
-  rc = read_nbytes(&buf[offset], bytes, &llval);
-  linenum = (int)llval;
-  offset += bytes;
-
-  i = 0;
-  /* read variable arguments */
-  while (offset < buflen) {
-    /* variable type */
-    args[i].arg_type = (enum VarArgType)(buf[offset++] & 0x00ff);
-    rc = read_length(buf, &offset, &(args[i].bytes));
-    if (args[i].bytes <= 0) {
-      break;
-    }
-    if (args[i].arg_type == BINARY_LOG_VAR_ARG_INTEGER) {
-      rc = read_nbytes(&buf[offset], args[i].bytes, &(args[i].llval));
-      printf("[%d] detected %d bytes integer arg = %llu\n", i, args[i].bytes,
-             args[i].llval);
-    } else if (args[i].arg_type == BINARY_LOG_VAR_ARG_DOUBLE) {
-      if (args[i].bytes == sizeof(long double)) {
-        bigendian_to_native(&buf[offset], args[i].bytes,
-                            (char *)&(args[i].ldbl));
-        printf("[%d] detected %d bytes long double arg = %Lg\n", i,
-               args[i].bytes, args[i].ldbl);
-      } else {
-        /* cannot read directly into long double because
-         * of memory architecture issues, so
-         * read in the correct data type first (as raw)
-         * and then type cast. Since the storage
-         * type is of bigger storage, so there is
-         * no issue.
-         */
-        double dbl_val;
-        bigendian_to_native(&buf[offset], args[i].bytes, (char *)&dbl_val);
-        args[i].ldbl = dbl_val;
-        printf("[%d] detected %d bytes double arg = %g\n", i, args[i].bytes,
-               dbl_val);
-      }
-    } else if (args[i].arg_type == BINARY_LOG_VAR_ARG_POINTER) {
-      bigendian_to_native(&buf[offset], args[i].bytes, (char *)&(args[i].p));
-      printf("[%d] detected %d bytes pointer arg = %p\n", i, args[i].bytes,
-             args[i].p);
-    } else if (args[i].arg_type == BINARY_LOG_VAR_ARG_STRING) {
-      /* store the reference at present, so there
-       * is no allocation, copy and free required.
-       */
-      args[i].s = &buf[offset];
-      printf("[%d] detected %d bytes string arg = [%.*s]\n", i, args[i].bytes,
-             args[i].bytes, args[i].s);
-    } else {
-      /* This is a bug! */
-      assert(0);
-    }
-    offset += args[i].bytes;
-    ++i;
-  }
-
-  logtime = (time_t)timeval;
-  rc = time_to_cstr(&logtime, time_str, MAX_TIME_STR_LEN);
-  if (rc < 0) {
-    snprintf(time_str, MAX_TIME_STR_LEN, "invalid-time");
-    return offset;
-  }
-
-  printf("buflen = %zd, offset = %d, msglen = %d\n", (size_t)buflen, offset, msglen);
-  printf("timestamp = %llu, time = %s\n", timeval, time_str);
-  printf("hostname=[%.*s], programname=[%.*s], threadname=[%.*s]\n",
-         hostname_len, hostname, programname_len, programname, threadname_len,
-         threadname);
-  printf("pid = %d, loglevel = %d\n", pid, loglevel);
-  printf("filename=[%.*s], funcname=[%.*s]\n", filename_len, filename,
-         funcname_len, funcname);
-  printf("linenum = %d\n", linenum);
-  return offset;
-}
+int analyze_received_binary_message(const char *format, const char *buf,
+                                    int buflen);
 
 int test_static_string(int argc, char *argv[]) {
   (void)argc;  /* unused parameter */

@@ -76,10 +76,10 @@ endif()
 
 # Platform-specific test for test_binary_logging
 if(WIN32)
-    add_executable(test_binary_logging test_binary_logging_win32.c)
+    add_executable(test_binary_logging test_binary_logging_win32.c test_binary_logging_common.c)
     target_link_libraries(test_binary_logging PRIVATE clogging ws2_32)
 else()
-    add_executable(test_binary_logging test_binary_logging_unix.c)
+    add_executable(test_binary_logging test_binary_logging_unix.c test_binary_logging_common.c)
     target_link_libraries(test_binary_logging PRIVATE clogging)
 endif()
 
