@@ -60,6 +60,13 @@ missing
 stamp-h1
 test-driver
 
+# CMake generated files
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+clogging.pc
+cmake-build-*/
+
 # libs
 libs/.libs
 libs/clogging.pc
@@ -73,3 +80,4 @@ test_*.trs
 # Your customizations below
 .github/agents
 .vscode/
+extra/

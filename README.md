@@ -12,13 +12,6 @@ A logging library for c programming language. It adhers to
 > shared library. Alternatively, you can statically link with
 > this library.
 
-## Building
-
-    sh bootstrap.sh
-    ./configure --prefix=/usr/local
-    make
-    make install
-
 ## Using Basic Logging on Console
 
 Take a look at the examples for details, but basically you could do the
@@ -74,6 +67,144 @@ The main application code will now look like as follows:
         return 0;
     }
 
+## Prerequisites
+
+- CMake 3.10 or later
+- C compiler (gcc, clang, MSVC, etc.)
+- POSIX threads library (pthread)
+- Optional: pkg-config (for development)
+
+## Quick Start
+
+### Linux/macOS
+
+```bash
+# Create build directory
+mkdir build
+cd build
+
+# Configure the project
+cmake ..
+
+# Build
+cmake --build .
+
+# Run tests
+ctest
+
+# Install (optional)
+sudo cmake --install . --prefix /usr/local
+```
+
+### Windows (with Visual Studio)
+
+```bash
+# Create build directory
+mkdir build
+cd build
+
+# Configure the project (Visual Studio 2019 or later)
+cmake .. -G "Visual Studio 16 2019"
+
+# Build
+cmake --build .
+
+# Run tests
+ctest
+
+# Install
+cmake --install . --prefix "C:\Program Files\clogging"
+```
+
+## Build Options
+
+- `BUILD_TESTS` (ON/OFF, default: ON) - Build test executables
+- `BUILD_SHARED_LIBS` (ON/OFF, default: ON) - Build shared libraries instead of static
+
+Example:
+```bash
+cmake .. -DBUILD_TESTS=OFF -DBUILD_SHARED_LIBS=OFF
+```
+
+## Installation
+
+### Standard Installation
+
+```bash
+cmake --install . --prefix /usr/local
+```
+
+This will install:
+- Libraries to `${prefix}/lib`
+- Headers to `${prefix}/include/clogging`
+- CMake config files to `${prefix}/lib/cmake/clogging`
+- pkg-config file to `${prefix}/lib/pkgconfig`
+
+### Custom Prefix
+
+```bash
+cmake --install . --prefix /custom/prefix
+```
+
+## Using the Library
+
+### With pkg-config
+
+```bash
+gcc -c myapp.c $(pkg-config --cflags clogging)
+gcc -o myapp myapp.o $(pkg-config --libs clogging)
+```
+
+### With CMake (Recommended)
+
+In your `CMakeLists.txt`:
+
+```cmake
+find_package(clogging REQUIRED)
+
+add_executable(myapp main.c)
+target_link_libraries(myapp PRIVATE clogging::clogging)
+```
+
+Then:
+```bash
+cmake .. -Dclogging_DIR=/usr/local/lib/cmake/clogging
+```
+
+### Manual Linking
+
+```bash
+gcc -I/usr/local/include -c myapp.c
+gcc -o myapp myapp.o -L/usr/local/lib -lclogging -lpthread
+```
+
+## Development Workflow
+
+### In-source Build (for development)
+
+```bash
+mkdir build
+cd build
+cmake .. -DCMAKE_BUILD_TYPE=Debug
+cmake --build .
+ctest --output-on-failure
+```
+
+### Out-of-source Build (recommended)
+
+The above example already uses out-of-source build, keeping source tree clean.
+
+## CMake Configuration Files
+
+The project installs the following CMake files:
+- `cloggingConfig.cmake` - Package configuration file
+- `cloggingConfigVersion.cmake` - Version information
+- `cloggingTargets.cmake` - Target definitions
+
+These enable other CMake projects to find and use clogging with:
+```cmake
+find_package(clogging CONFIG REQUIRED)
+```
 
 ### References
 
