@@ -273,7 +273,7 @@ void clogging_binary_logmsg(const char *filename, const char *funcname,
   remaining_bytes =
       (g_binary_previous_message_bytes - g_binary_previous_message_offset);
   if (remaining_bytes > 0) {
-    ssize_t len = (ssize_t)clogging_handle_write(g_binary_handle,
+    len = clogging_handle_write(g_binary_handle,
                 &g_binary_previous_message[g_binary_previous_message_offset],
                 remaining_bytes);
     if (len <= 0) {
@@ -574,7 +574,7 @@ static ssize_t fill_variable_arguments(char *store, ssize_t offset, const char *
        * TODO FIXME add a mechanism to restict
        * to a maximum size if going out of bounds.
        */
-      int s_len = strlen(tmp_s);
+      size_t s_len = strlen(tmp_s);
       /* store the size in bytes before the value */
       /* TODO FIXME the size of the string cannot be
        * greater than 2^15-1, which is a large
@@ -626,7 +626,8 @@ static ssize_t fill_variable_arguments(char *store, ssize_t offset, const char *
        * the bytes written so far in this
        * location.
        */
-      *tmp_n = offset;
+      /* lower 32 bits*/
+      *tmp_n = (int)(offset & ((1LL << 32) - 1));
       is_type_specifier = 0;
       lspecifier = LS_NONE;
       break;

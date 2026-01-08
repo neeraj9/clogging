@@ -87,8 +87,8 @@ static THREAD_LOCAL int g_fd_is_logging_initialized = 0;
 static THREAD_LOCAL char g_fd_total_message[TOTAL_MSG_BYTES];
 
 /* account for partial write */
-static THREAD_LOCAL uint8_t g_fd_previous_message_offset = 0;
-static THREAD_LOCAL uint8_t g_fd_previous_message_bytes = 0;
+static THREAD_LOCAL int g_fd_previous_message_offset = 0;
+static THREAD_LOCAL int g_fd_previous_message_bytes = 0;
 static THREAD_LOCAL char g_fd_previous_message[TOTAL_MSG_BYTES];
 
 /* store the number of message dropped as a counter for
@@ -99,8 +99,6 @@ static THREAD_LOCAL uint64_t g_fd_num_msg_drops = 0;
 int clogging_fd_init(const char *progname, uint8_t progname_len,
                      const char *threadname, uint8_t threadname_len,
                      enum LogLevel level, clogging_handle_t handle) {
-  int rc = 0;
-
   if (g_fd_is_logging_initialized > 0) {
     fprintf(stderr, "logging is already initialized or in the"
                     " process of initialization.\n");
@@ -121,17 +119,17 @@ int clogging_fd_init(const char *progname, uint8_t progname_len,
    */
   (void)get_log_level_as_cstring(LOG_LEVEL_ERROR);
 
-  clogging_strtcpy(g_fd_progname, progname, MAX_PROG_NAME_LEN);
-  clogging_strtcpy(g_fd_threadname, threadname, MAX_PROG_NAME_LEN);
+  clogging_strtcpy(g_fd_progname, progname, progname_len);
+  clogging_strtcpy(g_fd_threadname, threadname, threadname_len);
 #ifdef _WIN32
   {
     DWORD size = MAX_HOSTNAME_LEN;
     if (!GetComputerNameExA(ComputerNameDnsHostname, g_fd_hostname, &size)) {
-      clogging_strtcpy(g_fd_hostname, "unknown", MAX_HOSTNAME_LEN);
+      clogging_strtcpy(g_fd_hostname, "unknown", size);
     }
   }
 #else
-  rc = gethostname(g_fd_hostname, MAX_HOSTNAME_LEN);
+  int rc = gethostname(g_fd_hostname, MAX_HOSTNAME_LEN);
   if (rc < 0) {
     clogging_strtcpy(g_fd_hostname, "unknown", MAX_HOSTNAME_LEN);
   }
