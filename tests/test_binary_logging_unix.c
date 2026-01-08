@@ -107,6 +107,95 @@ int read_length(const char *buf, int *offset, int *bytes) {
   return 2;
 }
 
+/* Parse format string and extract expected argument types */
+int parse_format_specifiers(const char *format,
+                            enum VarArgType *expected_types,
+                            int max_args) {
+  int arg_count = 0;
+  const char *p = format;
+
+  while (*p && arg_count < max_args) {
+    if (*p == '%') {
+      p++;
+      if (*p == '%') {
+        /* escaped % */
+        p++;
+        continue;
+      }
+      /* skip flags, width, precision */
+      while (*p && (*p == '-' || *p == '+' || *p == ' ' || *p == '#' ||
+                    *p == '0' || (*p >= '0' && *p <= '9') || *p == '.')) {
+        p++;
+      }
+      /* skip length modifiers */
+      if (*p == 'l') {
+        p++;
+        if (*p == 'l') {
+          p++; /* long long */
+        }
+      } else if (*p == 'h') {
+        p++;
+        if (*p == 'h') {
+          p++; /* short or char */
+        }
+      }
+      /* get conversion specifier */
+      if (*p == 'd' || *p == 'i' || *p == 'u' || *p == 'x' || *p == 'X' ||
+          *p == 'o') {
+        expected_types[arg_count++] = BINARY_LOG_VAR_ARG_INTEGER;
+      } else if (*p == 'f' || *p == 'F' || *p == 'e' || *p == 'E' ||
+                 *p == 'g' || *p == 'G') {
+        expected_types[arg_count++] = BINARY_LOG_VAR_ARG_DOUBLE;
+      } else if (*p == 'p') {
+        expected_types[arg_count++] = BINARY_LOG_VAR_ARG_POINTER;
+      } else if (*p == 's' || *p == 'c') {
+        if (*p == 's') {
+          expected_types[arg_count++] = BINARY_LOG_VAR_ARG_STRING;
+        } else {
+          /* %c is treated as integer (char) */
+          expected_types[arg_count++] = BINARY_LOG_VAR_ARG_INTEGER;
+        }
+      }
+      p++;
+    } else {
+      p++;
+    }
+  }
+  return arg_count;
+}
+
+/* Validate that received variable arguments match the format string */
+int validate_variable_arguments(const char *format,
+                                struct variable_arg *args,
+                                int arg_count) {
+  enum VarArgType expected_types[MAX_NUM_VARIABLE_ARGS];
+  int expected_count = 0;
+  int i = 0;
+
+  expected_count = parse_format_specifiers(format, expected_types, MAX_NUM_VARIABLE_ARGS);
+
+  if (arg_count != expected_count) {
+    fprintf(stderr,
+            "ERROR: Argument count mismatch! Expected %d, got %d\n",
+            expected_count, arg_count);
+    return -1;
+  }
+
+  for (i = 0; i < arg_count; ++i) {
+    if (args[i].arg_type != expected_types[i]) {
+      fprintf(stderr,
+              "ERROR: Argument type mismatch at index %d! "
+              "Expected type %d, got type %d\n",
+              i, expected_types[i], args[i].arg_type);
+      return -1;
+    }
+  }
+
+  printf("SUCCESS: All %d variable arguments match the format string\n",
+         arg_count);
+  return 0;
+}
+
 /* create udp server and return the socket fd */
 int create_udp_server(int port) {
   struct sockaddr_in addr;
@@ -169,7 +258,7 @@ int create_client_socket(const char *ip, int port) {
   return fd;
 }
 
-int analyze_received_binary_message(const char *msg, const char *buf,
+int analyze_received_binary_message(const char *format, const char *buf,
                                     int buflen) {
   int msglen = 0;
   time_t logtime;
@@ -194,6 +283,7 @@ int analyze_received_binary_message(const char *msg, const char *buf,
   int rc = 0;
   int i = 0;
   struct variable_arg args[MAX_NUM_VARIABLE_ARGS];
+  int var_arg_count = 0;
 
   /* determine the endianness */
   rc = 1;
@@ -302,6 +392,15 @@ int analyze_received_binary_message(const char *msg, const char *buf,
     ++i;
   }
 
+  var_arg_count = i;
+
+  /* Validate that received arguments match the format string */
+  rc = validate_variable_arguments(format, args, var_arg_count);
+  if (rc < 0) {
+    fprintf(stderr, "Variable argument validation failed\n");
+    return -1;
+  }
+
   logtime = (time_t)timeval;
   rc = time_to_cstr(&logtime, time_str, MAX_TIME_STR_LEN);
   if (rc < 0) {
@@ -332,7 +431,7 @@ int test_static_string(int argc, char *argv[]) {
   int rc = 0;
   int bytes_received = 0;
   char buf[MAX_BUF_LEN];
-  char msg[] = "A fd debug log looks like this";
+  char format[] = "A fd debug log looks like this";
   struct sockaddr_in clientaddr;
 
   rc = prctl(PR_GET_NAME, (unsigned long)(pname), 0, 0, 0);
@@ -345,14 +444,14 @@ int test_static_string(int argc, char *argv[]) {
   /* printf("argv[0] = %s\n", argv[0]); */
   BINARY_INIT_LOGGING(pname, MAX_SIZE, "", 0, LOG_LEVEL_DEBUG, clogging_create_handle_from_fd(clientfd));
   assert(BINARY_GET_LOG_LEVEL() == LOG_LEVEL_DEBUG);
-  BINARY_LOG_DEBUG(msg);
+  BINARY_LOG_DEBUG(format);
 
   bytes_received =
       receive_msg_from_client(serverfd, buf, MAX_BUF_LEN, &clientaddr);
-  printf("msg sent size = %zd\n", strlen(msg));
+  printf("format sent size = %zd\n", strlen(format));
   printf("bytes_received = %d\n", bytes_received);
 
-  rc = analyze_received_binary_message(msg, buf, bytes_received);
+  rc = analyze_received_binary_message(format, buf, bytes_received);
 
   BINARY_SET_LOG_LEVEL(LOG_LEVEL_INFO);
   assert(BINARY_GET_LOG_LEVEL() == LOG_LEVEL_INFO);
