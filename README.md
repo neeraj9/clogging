@@ -21,7 +21,7 @@ following to get started.
 
     int main(int argc, char *argv[])
     {
-        BASIC_INIT_LOGGING(argv[0], "", LOG_LEVEL_DEBUG);
+        BASIC_INIT_LOGGING(argv[0], 255, "", 0, LOG_LEVEL_DEBUG);
         BASIC_LOG_DEBUG("A basic debug log looks like this");
         return 0;
     }

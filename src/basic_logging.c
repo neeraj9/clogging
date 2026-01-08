@@ -14,7 +14,6 @@
 
 #include <stdarg.h>   /* va_start() and friends */
 #include <stdio.h>    /* fprintf() and friends */
-#include <string.h>   /* strncpy() */
 #include <time.h>     /* time() */
 
 #ifdef _WIN32
@@ -65,10 +64,9 @@ static THREAD_LOCAL int g_is_logging_initialized = 0;
  */
 static THREAD_LOCAL uint64_t g_basic_num_msg_drops = 0;
 
-int clogging_basic_init(const char *progname, const char *threadname,
+int clogging_basic_init(const char *progname, uint8_t progname_len,
+                        const char *threadname, uint8_t threadname_len,
                         enum LogLevel level) {
-  int rc = 0;
-
   if (g_is_logging_initialized > 0) {
     fprintf(stderr, "logging is already initialized or in the"
                     " process of initialization.\n");
@@ -89,19 +87,19 @@ int clogging_basic_init(const char *progname, const char *threadname,
    */
   (void)get_log_level_as_cstring(LOG_LEVEL_ERROR);
 
-  strncpy(g_progname, progname, MAX_PROG_NAME_LEN);
-  strncpy(g_threadname, threadname, MAX_PROG_NAME_LEN);
+  clogging_strtcpy(g_progname, progname, progname_len);
+  clogging_strtcpy(g_threadname, threadname, threadname_len);
 #ifdef _WIN32
   {
     DWORD size = MAX_HOSTNAME_LEN;
     if (!GetComputerNameExA(ComputerNameDnsHostname, g_hostname, &size)) {
-      strncpy(g_hostname, "unknown", MAX_HOSTNAME_LEN);
+      clogging_strtcpy(g_hostname, "unknown", MAX_HOSTNAME_LEN);
     }
   }
 #else
-  rc = gethostname(g_hostname, MAX_HOSTNAME_LEN);
+  int rc = gethostname(g_hostname, MAX_HOSTNAME_LEN);
   if (rc < 0) {
-    strncpy(g_hostname, "unknown", MAX_HOSTNAME_LEN);
+    clogging_strtcpy(g_hostname, "unknown", MAX_HOSTNAME_LEN);
   }
 #endif
 #ifdef _WIN32

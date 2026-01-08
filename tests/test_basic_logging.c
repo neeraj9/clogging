@@ -15,7 +15,7 @@ int main(int argc, char *argv[]) {
   (void)argc;  /* unused parameter */
   (void)argv;  /* unused parameter */
 
-  INIT_LOGGING(argv[0], "", LOG_LEVEL_DEBUG);
+  INIT_LOGGING(argv[0], 255, "", 0, LOG_LEVEL_DEBUG);
   LOG_DEBUG("A basic debug log looks like this");
   assert(GET_LOG_LEVEL() == LOG_LEVEL_DEBUG);
   SET_LOG_LEVEL(LOG_LEVEL_INFO);

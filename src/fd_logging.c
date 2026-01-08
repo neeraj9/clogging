@@ -15,7 +15,7 @@
 #include <errno.h>    /* errno */
 #include <stdarg.h>   /* va_start() and friends */
 #include <stdio.h>    /* fprintf() and friends */
-#include <string.h>   /* strncpy(), strerror_r() */
+#include <string.h>   /* strerror_r() */
 #include <sys/stat.h> /* fstat() */
 #include <sys/types.h>
 #include <time.h>   /* time() */
@@ -92,7 +92,8 @@ static THREAD_LOCAL char g_fd_previous_message[TOTAL_MSG_BYTES];
  */
 static THREAD_LOCAL uint64_t g_fd_num_msg_drops = 0;
 
-int clogging_fd_init(const char *progname, const char *threadname,
+int clogging_fd_init(const char *progname, uint8_t progname_len,
+                     const char *threadname, uint8_t threadname_len,
                      enum LogLevel level, int fd) {
   int rc = 0;
 
@@ -116,19 +117,19 @@ int clogging_fd_init(const char *progname, const char *threadname,
    */
   (void)get_log_level_as_cstring(LOG_LEVEL_ERROR);
 
-  strncpy(g_fd_progname, progname, MAX_PROG_NAME_LEN);
-  strncpy(g_fd_threadname, threadname, MAX_PROG_NAME_LEN);
+  clogging_strtcpy(g_fd_progname, progname, MAX_PROG_NAME_LEN);
+  clogging_strtcpy(g_fd_threadname, threadname, MAX_PROG_NAME_LEN);
 #ifdef _WIN32
   {
     DWORD size = MAX_HOSTNAME_LEN;
     if (!GetComputerNameExA(ComputerNameDnsHostname, g_fd_hostname, &size)) {
-      strncpy(g_fd_hostname, "unknown", MAX_HOSTNAME_LEN);
+      clogging_strtcpy(g_fd_hostname, "unknown", MAX_HOSTNAME_LEN);
     }
   }
 #else
   rc = gethostname(g_fd_hostname, MAX_HOSTNAME_LEN);
   if (rc < 0) {
-    strncpy(g_fd_hostname, "unknown", MAX_HOSTNAME_LEN);
+    clogging_strtcpy(g_fd_hostname, "unknown", MAX_HOSTNAME_LEN);
   }
 #endif
 #ifdef _WIN32

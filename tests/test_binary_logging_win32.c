@@ -350,7 +350,7 @@ int test_static_string(int argc, char *argv[]) {
 
   /* printf("pname = %s\n", pname); */
   /* printf("argv[0] = %s\n", argv[0]); */
-  BINARY_INIT_LOGGING(pname, "", LOG_LEVEL_DEBUG, (int)clientfd);
+  BINARY_INIT_LOGGING(pname, MAX_SIZE, "", 0, LOG_LEVEL_DEBUG, (int)clientfd);
   assert(BINARY_GET_LOG_LEVEL() == LOG_LEVEL_DEBUG);
   BINARY_LOG_DEBUG(msg);
 
@@ -412,7 +412,7 @@ int test_variable_arguments(int argc, char *argv[]) {
 
   /* printf("pname = %s\n", pname); */
   /* printf("argv[0] = %s\n", argv[0]); */
-  BINARY_INIT_LOGGING(pname, "", LOG_LEVEL_DEBUG, (int)clientfd);
+  BINARY_INIT_LOGGING(pname, MAX_SIZE, "", 0, LOG_LEVEL_DEBUG, (int)clientfd);
   assert(BINARY_GET_LOG_LEVEL() == LOG_LEVEL_DEBUG);
   BINARY_LOG_DEBUG(format, argint, argchar, arguint, arglongint, arglonglongint,
                    argulonglongint, argptr, argstr);

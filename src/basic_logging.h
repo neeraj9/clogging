@@ -13,8 +13,8 @@
 
 #include <stdint.h>
 
-#define BASIC_INIT_LOGGING(pn, tn, level)                                      \
-  clogging_basic_init((pn), (tn), (level))
+#define BASIC_INIT_LOGGING(pn, pnlen, tn, tnlen, level)                                      \
+  clogging_basic_init((pn), (pnlen), (tn), (tnlen), (level))
 #define BASIC_SET_LOG_LEVEL(level) clogging_basic_set_loglevel(level)
 #define BASIC_GET_LOG_LEVEL() clogging_basic_get_loglevel()
 #define BASIC_GET_NUM_DROPPED_MESSAGES()                                       \
@@ -51,7 +51,8 @@ extern "C" {
  * call threadname = "-worker1" for worker1 or say
  * threadname = "-tcplistener" for a worker who listens for tcp connections.
  */
-int clogging_basic_init(const char *progname, const char *threadname,
+int clogging_basic_init(const char *progname, uint8_t progname_len,
+                        const char *threadname, uint8_t threadname_len,
                         enum LogLevel level);
 
 /*

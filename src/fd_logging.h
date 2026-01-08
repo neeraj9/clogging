@@ -13,8 +13,8 @@
 
 #include <stdint.h>
 
-#define FD_INIT_LOGGING(pn, tn, level, fd)                                     \
-  clogging_fd_init((pn), (tn), (level), (fd))
+#define FD_INIT_LOGGING(pn, pnlen, tn, tnlen, level, fd)                                     \
+  clogging_fd_init((pn), (pnlen), (tn), (tnlen), (level), (fd))
 #define FD_SET_LOG_LEVEL(level) clogging_fd_set_loglevel(level)
 #define FD_GET_LOG_LEVEL() clogging_fd_get_loglevel()
 #define FD_GET_NUM_DROPPED_MESSAGES() clogging_fd_get_num_dropped_messages()
@@ -52,7 +52,8 @@ extern "C" {
  * worse in some ways, so take your pick. Personally, I would risk the
  * non-blocking mode and handle partial writes at the receiver.
  */
-int clogging_fd_init(const char *progname, const char *threadname,
+int clogging_fd_init(const char *progname, uint8_t progname_len,
+                     const char *threadname, uint8_t threadname_len,
                      enum LogLevel level, int fd);
 
 /*

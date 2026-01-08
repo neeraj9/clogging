@@ -27,6 +27,7 @@
 
 struct context {
   const char *processname;
+  uint8_t processname_len;
   int threadindex;
   int num_loops;
 };
@@ -37,7 +38,7 @@ void *work(void *data) {
   char threadname[MAX_THREADNAME_SIZE];
   snprintf(threadname, MAX_THREADNAME_SIZE, "thread-%d", ctx->threadindex);
 
-  BASIC_INIT_LOGGING(ctx->processname, threadname, LOG_LEVEL_INFO);
+  BASIC_INIT_LOGGING(ctx->processname, ctx->processname_len, threadname, LOG_LEVEL_INFO);
 
   for (i = 0; i < ctx->num_loops; ++i) {
     BASIC_LOG_INFO("Some log which gets printed to console.");
@@ -45,13 +46,13 @@ void *work(void *data) {
   return 0;
 }
 
-int runall(const char *pname, int num_processes, int num_threads,
+int runall(const char *pname, uint8_t pname_len, int num_processes, int num_threads,
            int num_loops) {
   /* POSIX implementation: use fork() and threads */
   long i;
   pid_t pid;
 
-  BASIC_INIT_LOGGING(pname, "", LOG_LEVEL_DEBUG);
+  BASIC_INIT_LOGGING(pname, pname_len, "", 0, LOG_LEVEL_DEBUG);
 
   BASIC_LOG_INFO("Benchmarking starts");
   BASIC_LOG_INFO("pname = %s, np = %d, nt = %d, nl = %d\n", pname,
@@ -70,6 +71,7 @@ int runall(const char *pname, int num_processes, int num_threads,
 
       for (j = 0; j < num_threads; j++) {
         thread_contexts[j].processname = pname;
+        thread_contexts[j].processname_len = pname_len;
         thread_contexts[j].threadindex = j;
         thread_contexts[j].num_loops = num_loops;
         pthread_create(&(tids[j]), NULL, work, (void *)&thread_contexts[j]);
@@ -117,7 +119,7 @@ int main(int argc, char **argv) {
     }
   }
 
-  runall(pname, num_processes, num_threads, num_loops);
+  runall(pname, MAX_PROCESSNAME_SIZE, num_processes, num_threads, num_loops);
 
   return 0;
 }

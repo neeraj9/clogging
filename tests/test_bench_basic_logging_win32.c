@@ -28,8 +28,12 @@ Windows header to exclude less commonly used APIs, including the old winsock.h.
 #define MAX_PROCESSNAME_SIZE 32 /* must be at least 16 */
 #define MAX_PROCESSES 1  /* Windows implementation uses single process */
 
+static_assert(MAX_PROCESSNAME_SIZE < UINT8_MAX, "Process name size exceeds uint8_t");
+static_assert(MAX_THREADNAME_SIZE < UINT8_MAX, "Thread name size exceeds uint8_t");
+
 struct context {
   const char *processname;
+  uint8_t processname_len;
   int threadindex;
   int num_loops;
 };
@@ -38,9 +42,10 @@ DWORD WINAPI work(LPVOID data) {
   struct context *ctx = (struct context *)data;
   int i = 0;
   char threadname[MAX_THREADNAME_SIZE];
-  snprintf(threadname, MAX_THREADNAME_SIZE, "thread-%d", ctx->threadindex);
+  int threadname_len = snprintf(threadname, MAX_THREADNAME_SIZE, "thread-%d", ctx->threadindex);
+  assert(threadname_len > 0 && threadname_len < MAX_THREADNAME_SIZE);
 
-  BASIC_INIT_LOGGING(ctx->processname, threadname, LOG_LEVEL_INFO);
+  BASIC_INIT_LOGGING(ctx->processname, ctx->processname_len, threadname, (uint8_t)threadname_len, LOG_LEVEL_INFO);
 
   for (i = 0; i < ctx->num_loops; ++i) {
     BASIC_LOG_INFO("Some log which gets printed to console.");
@@ -48,7 +53,7 @@ DWORD WINAPI work(LPVOID data) {
   return 0;
 }
 
-int runall(const char *pname, int num_processes, int num_threads,
+int runall(const char *pname, uint8_t pname_len, int num_processes, int num_threads,
            int num_loops) {
   /* Windows implementation: no fork(), use threads only */
   int j = 0;
@@ -56,7 +61,7 @@ int runall(const char *pname, int num_processes, int num_threads,
   struct context *thread_contexts =
       (struct context *)malloc(sizeof(struct context) * num_threads);
 
-  BASIC_INIT_LOGGING(pname, "", LOG_LEVEL_DEBUG);
+  BASIC_INIT_LOGGING(pname, pname_len, "", 0, LOG_LEVEL_DEBUG);
 
   BASIC_LOG_INFO("Benchmarking starts");
   BASIC_LOG_INFO("pname = %s, np = %d, nt = %d, nl = %d\n", pname,
@@ -111,7 +116,7 @@ int main(int argc, char **argv) {
     }
   }
 
-  runall(pname, num_processes, num_threads, num_loops);
+  runall(pname, MAX_PROCESSNAME_SIZE, num_processes, num_threads, num_loops);
 
   return 0;
 }

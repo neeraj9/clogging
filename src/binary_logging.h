@@ -13,8 +13,8 @@
 
 #include <stdint.h>
 
-#define BINARY_INIT_LOGGING(pn, tn, level, fd)                                 \
-  clogging_binary_init((pn), (tn), (level), (fd))
+#define BINARY_INIT_LOGGING(pn, pnlen, tn, tnlen, level, fd)                                 \
+  clogging_binary_init((pn), (pnlen), (tn), (tnlen), (level), (fd))
 #define BINARY_SET_LOG_LEVEL(level) clogging_binary_set_loglevel(level)
 #define BINARY_GET_LOG_LEVEL() clogging_binary_get_loglevel()
 #define BINARY_GET_NUM_DROPPED_MESSAGES()                                      \
@@ -71,7 +71,8 @@ enum VarArgType {
  * worse in some ways, so take your pick. Personally, I would risk the
  * non-blocking mode and handle partial writes at the receiver.
  */
-int clogging_binary_init(const char *progname, const char *threadname,
+int clogging_binary_init(const char *progname, uint8_t progname_len,
+                        const char *threadname, uint8_t threadname_len,
                          enum LogLevel level, int fd);
 
 /*

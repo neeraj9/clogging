@@ -39,7 +39,7 @@ Windows header to exclude less commonly used APIs, including the old winsock.h:
 #include <stdarg.h>   /* va_start() and friends */
 #include <stddef.h>   /* ptrdiff_t */
 #include <stdio.h>    /* dprintf() and friends */
-#include <string.h>   /* strncpy(), strlen() */
+#include <string.h>   /* strlen() */
 #include <sys/types.h>
 #include <time.h>   /* time() */
 #include <sys/types.h>
@@ -115,9 +115,9 @@ static int fill_variable_arguments(char *store, int offset, const char *format,
  *
  * TODO FIXME: should we use htobe16(), htobe32() or htobe64() instead?
  */
-int portable_copy(char *store, int *offset, unsigned long long val,
+int portable_copy(char *store, ssize_t *offset, unsigned long long val,
                          ssize_t bytes) {
-  int newoffset = *offset;
+  ssize_t newoffset = *offset;
 
   switch (bytes) {
   case 1: /* 8 bits */
@@ -150,10 +150,9 @@ int portable_copy(char *store, int *offset, unsigned long long val,
   return 0;
 }
 
-int clogging_binary_init(const char *progname, const char *threadname,
+int clogging_binary_init(const char *progname, uint8_t progname_len,
+                         const char *threadname, uint8_t threadname_len,
                          enum LogLevel level, int fd) {
-  int rc = 0;
-
   if (g_binary_is_logging_initialized > 0) {
     fprintf(stderr, "logging is already initialized or in the"
                     " process of initialization.\n");
@@ -174,24 +173,24 @@ int clogging_binary_init(const char *progname, const char *threadname,
    */
   (void)get_log_level_as_cstring(LOG_LEVEL_ERROR);
 
-  strncpy(g_binary_progname, progname, MAX_PROG_NAME_LEN);
-  g_binary_progname_length = strlen(g_binary_progname) & 0x7fff;
-  strncpy(g_binary_threadname, threadname, MAX_PROG_NAME_LEN);
-  g_binary_threadname_length = strlen(g_binary_threadname) & 0x7fff;
+  clogging_strtcpy(g_binary_progname, progname, progname_len);
+  g_binary_progname_length = strlen(g_binary_progname) & 0x7f;
+  clogging_strtcpy(g_binary_threadname, threadname, threadname_len);
+  g_binary_threadname_length = strlen(g_binary_threadname) & 0x7f;
 #ifdef _WIN32
   {
     DWORD size = MAX_HOSTNAME_LEN;
     if (!GetComputerNameExA(ComputerNameDnsHostname, g_binary_hostname, &size)) {
-      strncpy(g_binary_hostname, "unknown", MAX_HOSTNAME_LEN);
+      clogging_strtcpy(g_binary_hostname, "unknown", MAX_HOSTNAME_LEN);
     }
   }
 #else
-  rc = gethostname(g_binary_hostname, MAX_HOSTNAME_LEN);
+  int rc = gethostname(g_binary_hostname, MAX_HOSTNAME_LEN);
   if (rc < 0) {
-    strncpy(g_binary_hostname, "unknown", MAX_HOSTNAME_LEN);
+    clogging_strtcpy(g_binary_hostname, "unknown", MAX_HOSTNAME_LEN);
   }
 #endif
-  g_binary_hostname_length = strlen(g_binary_hostname) & 0x7fff;
+  g_binary_hostname_length = strlen(g_binary_hostname) & 0x7f;
   #ifdef _WIN32
     g_binary_pid = (int)GetCurrentProcessId();
   #else
@@ -218,10 +217,10 @@ void clogging_binary_logmsg(const char *filename, const char *funcname,
   int rc = 0;
   va_list ap;
   char *store = g_binary_previous_message;
-  int offset = 0;
+  ssize_t offset = 0;
   ssize_t bytes_written = 0;
-  int filenamelen = strlen(filename) & 0x7fff;
-  int funcnamelen = strlen(funcname) & 0x7fff;
+  int filenamelen = strlen(filename) & 0x7f;
+  int funcnamelen = strlen(funcname) & 0x7f;
 
   /* ignore logs which are filtered out */
   if (level > g_binary_level) {
