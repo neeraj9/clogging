@@ -67,7 +67,7 @@ DWORD WINAPI work(LPVOID data) {
   int threadname_len = snprintf(threadname, MAX_THREADNAME_SIZE, "thread-%d", ctx->threadindex);
   if (threadname_len < 0 || threadname_len >= MAX_THREADNAME_SIZE) {
     LOG_ERROR("snprintf() failed for thread name");
-    return data;
+    return 0;
   }
 
   clogging_fd_init(ctx->processname, threadname, LOG_LEVEL_INFO, clogging_create_handle_from_fd((int)ctx->fd), NULL);

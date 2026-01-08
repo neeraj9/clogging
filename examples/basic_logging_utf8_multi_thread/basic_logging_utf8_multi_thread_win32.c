@@ -57,6 +57,7 @@ DWORD WINAPI thread_function(LPVOID lpParam) {
 }
 
 int main(int argc, char *argv[]) {
+  (void)argc;  /* unused parameter */
   printf("Basic Multi-Thread Logging UTF-8 Example\n");
   printf("==========================================\n");
 
