@@ -205,6 +205,18 @@ These enable other CMake projects to find and use clogging with:
 find_package(clogging CONFIG REQUIRED)
 ```
 
+## Running tests
+
+Run tests in `Debug` configuration as follows:
+
+```
+mkdir build
+cd build
+cmake ..
+cmake --build .
+ctest -C Debug
+```
+
 ### References
 
 * [ISO/IEC 9899:2011](http://www.iso.org/iso/home/store/catalogue_ics/catalogue_detail_ics.htm?csnumber=57853)
