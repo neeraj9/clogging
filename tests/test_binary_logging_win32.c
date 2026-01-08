@@ -336,7 +336,7 @@ int test_static_string(int argc, char *argv[]) {
   WSADATA wsa_data;
 
   /* Windows: use program name or default */
-  strncpy_s(pname, MAX_SIZE, "test_binary_logging", MAX_SIZE - 1);
+  clogging_strtcpy(pname, "test_binary_logging", MAX_SIZE);
 
   /* Initialize Winsock */
   rc = WSAStartup(MAKEWORD(2, 2), &wsa_data);
@@ -398,7 +398,7 @@ int test_variable_arguments(int argc, char *argv[]) {
   char *argstr = format;
 
   /* Windows: use program name or default */
-  strncpy_s(pname, MAX_SIZE, "test_binary_logging", MAX_SIZE - 1);
+  clogging_strtcpy(pname, "test_binary_logging", MAX_SIZE);
 
   /* Initialize Winsock */
   rc = WSAStartup(MAKEWORD(2, 2), &wsa_data);

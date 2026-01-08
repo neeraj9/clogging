@@ -156,9 +156,7 @@ int main(int argc, const char *argv[]) {
   HANDLE udp_server_thread_handle = NULL;
 
   /* Windows: use program name or default */
-  strncpy_s(pname, MAX_PROCESSNAME_SIZE, "test_bench_fd_logging", MAX_PROCESSNAME_SIZE - 1);
-
-
+  clogging_strtcpy(pname, "test_bench_fd_logging", MAX_PROCESSNAME_SIZE);
 
   if (argc < 6) {
     num_loops = 10;

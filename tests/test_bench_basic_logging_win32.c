@@ -92,7 +92,7 @@ int main(int argc, char **argv) {
   int num_threads = 0;
 
   /* Windows: use program name or default */
-  strncpy_s(pname, MAX_PROCESSNAME_SIZE, "test_bench_basic_logging", MAX_PROCESSNAME_SIZE - 1);
+  clogging_strtcpy(pname, "test_bench_basic_logging", MAX_PROCESSNAME_SIZE);
 
   if (argc < 4) {
     num_loops = 10;

@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
   char pname[MAX_SIZE] = {0};
 
   /* Windows: use program name or default */
-  strncpy_s(pname, MAX_SIZE, "test_fd_logging", MAX_SIZE - 1);
+  clogging_strtcpy(pname, "test_fd_logging", MAX_SIZE);
 
   /* printf("pname = %s\n", pname); */
   /* printf("argv[0] = %s\n", argv[0]); */

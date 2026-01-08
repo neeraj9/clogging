@@ -12,8 +12,9 @@
 
 #include "logging_common.h"
 
-#include <stdio.h> /* snprintf() */
-#include <time.h>  /* gmtime_r() */
+#include <string.h>   /* strncpy() */
+#include <stdio.h>    /* snprintf() */
+#include <time.h>     /* gmtime_r() */
 
 #ifdef __cplusplus
 extern "C" {
@@ -73,6 +74,21 @@ int time_to_cstr(time_t *t, char *timestr, int maxlen) {
            tms.tm_year + 1900, tms.tm_mon + 1, tms.tm_mday, tms.tm_hour,
            tms.tm_min, tms.tm_sec);
 }
+
+char *clogging_strtcpy(char *dest, const char *src, size_t dsize) {
+  /* implement using strncpy */
+  if (dsize == 0) {
+    return dest;
+  }
+#ifdef _WIN32
+  strncpy_s(dest, dsize, src, _TRUNCATE);
+#else
+  strncpy(dest, src, dsize - 1);
+  dest[dsize - 1] = '\0';
+#endif
+  return dest;
+}
+
 
 #ifdef __cplusplus
 }

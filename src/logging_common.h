@@ -64,6 +64,14 @@ const char *get_log_level_as_cstring(enum LogLevel level);
  */
 int time_to_cstr(time_t *t, char *timestr, int maxlen);
 
+/*
+  * A safer version of strncpy which guarantees null termination
+  * of the destination string with truncation if required.
+  *
+  * The function returns the pointer to destination string.
+*/
+char *clogging_strtcpy(char *dest, const char *src, size_t dsize);
+
 #ifdef __cplusplus
 }
 #endif
