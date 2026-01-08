@@ -148,6 +148,22 @@ void test_inline_emoji(void) {
   printf("✓ Inline emoji test passed\n");
 }
 
+/* Test embedded null byte detection (null bytes cannot appear in valid UTF-8) */
+void test_embedded_null_byte(void) {
+  /* Valid UTF-8 string with null byte embedded (invalid for UTF-8 strings) */
+  const char embedded_null[] = {'H', 'e', 'l', 'l', 'o', 0x00, 'W', 'o', 'r', 'l', 'd', 0x00};
+  
+  /* The string should be treated as ending at the first null byte
+   * so clogging_utf8_strlen would return 5 (only "Hello") */
+  assert(clogging_utf8_strlen(embedded_null) == 5);
+  
+  /* Validating with explicit length should detect null byte as invalid
+   * The function should return 0 if null byte is found in the middle */
+  assert(clogging_utf8_validate(embedded_null, 11) == 0);
+  
+  printf("✓ Embedded null byte detection test passed\n");
+}
+
 int main(void) {
   printf("Running UTF-8 validation tests...\n\n");
 
@@ -165,6 +181,7 @@ int main(void) {
   test_continuation_byte();
   test_char_length();
   test_inline_emoji();
+  test_embedded_null_byte();
 
   printf("\n✓ All UTF-8 validation tests passed!\n");
   return 0;

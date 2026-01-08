@@ -64,6 +64,13 @@ int clogging_utf8_validate(const char *str, size_t len) {
   size_t i = 0;
   while (i < len) {
     unsigned char byte = (unsigned char)str[i];
+    
+    /* Check for embedded null byte (invalid in UTF-8 when length is explicit) */
+    if (byte == 0x00) {
+      /* If we have an explicit length and haven't reached it, null byte in middle is invalid */
+      return 0;
+    }
+    
     int char_len = clogging_utf8_char_length(byte);
 
     if (char_len < 0) {
