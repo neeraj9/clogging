@@ -83,8 +83,8 @@ static THREAD_LOCAL int g_fd_is_logging_initialized = 0;
 static THREAD_LOCAL char g_fd_total_message[TOTAL_MSG_BYTES];
 
 /* account for partial write */
-static THREAD_LOCAL char g_fd_previous_message_offset = 0;
-static THREAD_LOCAL char g_fd_previous_message_bytes = 0;
+static THREAD_LOCAL uint8_t g_fd_previous_message_offset = 0;
+static THREAD_LOCAL uint8_t g_fd_previous_message_bytes = 0;
 static THREAD_LOCAL char g_fd_previous_message[TOTAL_MSG_BYTES];
 
 /* store the number of message dropped as a counter for
@@ -295,11 +295,19 @@ void clogging_fd_logmsg(const char *funcname, int linenum, enum LogLevel level,
     strerror_r(err, errmsg, sizeof(errmsg));
     fprintf(stderr, "%s%s: write() failed, e=%d, errmsg=[%s]\n", g_fd_progname,
             g_fd_threadname, err, errmsg);
+    ++g_fd_num_msg_drops;
   } else if (bytes_sent != (len + msg_offset)) {
     fprintf(stderr, "%s%s: could write only %d out of %d bytes\n",
-            g_fd_progname, g_fd_threadname, bytes_sent, len + msg_offset);
+      g_fd_progname, g_fd_threadname, bytes_sent, len + msg_offset);
   } else {
     fprintf(stderr, "%s%s: success\n", g_fd_progname, g_fd_threadname);
+  }
+#else
+  if (bytes_sent < 0 || bytes_sent != (len + msg_offset)) {
+    /* cannot write a thing, so drop the current message
+     */
+    ++g_fd_num_msg_drops;
+    return;
   }
 #endif /* VERBOSE */
 }

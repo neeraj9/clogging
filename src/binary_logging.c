@@ -79,8 +79,8 @@ static THREAD_LOCAL int g_binary_is_logging_initialized = 0;
  * stack allocation all the time.
  */
 /* account for partial write */
-static THREAD_LOCAL char g_binary_previous_message_offset = 0;
-static THREAD_LOCAL char g_binary_previous_message_bytes = 0;
+static THREAD_LOCAL uint8_t g_binary_previous_message_offset = 0;
+static THREAD_LOCAL uint8_t g_binary_previous_message_bytes = 0;
 static THREAD_LOCAL char g_binary_previous_message[TOTAL_MSG_BYTES];
 
 /* store the number of message dropped as a counter for
@@ -188,7 +188,7 @@ int clogging_binary_init(const char *progname, const char *threadname,
 #else
   rc = gethostname(g_binary_hostname, MAX_HOSTNAME_LEN);
   if (rc < 0) {
-    strncpy(g_hostname, "unknown", MAX_HOSTNAME_LEN);
+    strncpy(g_binary_hostname, "unknown", MAX_HOSTNAME_LEN);
   }
 #endif
   g_binary_hostname_length = strlen(g_binary_hostname) & 0x7fff;
@@ -603,7 +603,7 @@ static int fill_variable_arguments(char *store, int offset, const char *format,
          * that width is specified as variable
          * argument.
          */
-        int width = va_arg(ap, int);
+        (void)va_arg(ap, int);  /* width */
         /* TODO FIXME, shouldn't we care. Maybe
          * later. Ideally we should be passing
          * that as with other variable arguments,

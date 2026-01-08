@@ -55,7 +55,7 @@ const char *get_log_level_as_cstring(enum LogLevel level) {
    * logging_common.h, so update this mapping table to
    * match that.
    */
-  static const THREAD_LOCAL char *level_to_str[] = {
+  static THREAD_LOCAL const char *level_to_str[] = {
       "ERROR", /* 0 */
       "WARN",  /* 1 */
       "INFO",  /* 2 */
@@ -69,7 +69,7 @@ int time_to_cstr(time_t *t, char *timestr, int maxlen) {
   struct tm tms;
 
   gmtime_r(t, &tms);
-  snprintf(timestr, maxlen, "%04d-%02d-%02dT%02d:%02d:%02d+00:00",
+  return snprintf(timestr, maxlen, "%04d-%02d-%02dT%02d:%02d:%02d+00:00",
            tms.tm_year + 1900, tms.tm_mon + 1, tms.tm_mday, tms.tm_hour,
            tms.tm_min, tms.tm_sec);
 }
