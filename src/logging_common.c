@@ -86,7 +86,19 @@ int time_to_cstr(time_t *t, char *timestr, int maxlen) {
 }
 
 char *clogging_strtcpy(char *dest, const char *src, size_t dsize) {
-  /* implement using strncpy */
+  /* Its better to check for corner cases beforehand to avoid
+   * any undefined behavior.
+   * As per cppreference.com the following applies.
+   * The following errors are detected at runtime and call the currently installed constraint handler function:
+   * - src or dest is a null pointer
+   * - destsz is zero or greater than RSIZE_MAX
+   * - count is greater than RSIZE_MAX
+   * - count is greater or equal destsz, but destsz is less or equal strnlen_s(src, count), in other words, truncation would occur
+   * - overlap would occur between the source and the destination strings
+   */
+  if (dest == NULL || src == NULL) {
+    return dest;
+  }
   if (dsize == 0) {
     return dest;
   }
