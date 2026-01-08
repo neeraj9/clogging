@@ -83,7 +83,7 @@ mkdir build
 cd build
 
 # Configure the project
-cmake ..
+cmake .. -DCMAKE_BUILD_TYPE=Debug
 
 # Build
 cmake --build .
@@ -97,6 +97,10 @@ sudo cmake --install . --prefix /usr/local
 
 ### Windows (with Visual Studio)
 
+> With multi-config generators, CMAKE_BUILD_TYPE is ignored—the configuration is selected
+> at build time, not configure time.When you run cmake --build . without specifying a config,
+> Visual Studio defaults to Debug. You need to explicitly specify the configuration.
+
 ```bash
 # Create build directory
 mkdir build
@@ -106,7 +110,7 @@ cd build
 cmake .. -G "Visual Studio 16 2019"
 
 # Build
-cmake --build .
+cmake --build . --config Debug
 
 # Run tests
 ctest
