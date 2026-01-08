@@ -83,8 +83,8 @@ static THREAD_LOCAL int g_binary_is_logging_initialized = 0;
  * stack allocation all the time.
  */
 /* account for partial write */
-static THREAD_LOCAL uint8_t g_binary_previous_message_offset = 0;
-static THREAD_LOCAL uint8_t g_binary_previous_message_bytes = 0;
+static THREAD_LOCAL ssize_t g_binary_previous_message_offset = 0;
+static THREAD_LOCAL ssize_t g_binary_previous_message_bytes = 0;
 static THREAD_LOCAL char g_binary_previous_message[TOTAL_MSG_BYTES];
 
 /* store the number of message dropped as a counter for
@@ -216,8 +216,8 @@ void clogging_binary_logmsg(const char *filename, const char *funcname,
                             int linenum, enum LogLevel level,
                             const char *format, ...) {
   time_t now;
-  int remaining_bytes = 0;
-  int len = 0;
+  ssize_t remaining_bytes = 0;
+  ssize_t len = 0;
   int rc = 0;
   va_list ap;
   char *store = g_binary_previous_message;
@@ -240,7 +240,7 @@ void clogging_binary_logmsg(const char *filename, const char *funcname,
   remaining_bytes =
       (g_binary_previous_message_bytes - g_binary_previous_message_offset);
   if (remaining_bytes > 0) {
-    len = (int)clogging_handle_write(g_binary_handle,
+    ssize_t len = (ssize_t)clogging_handle_write(g_binary_handle,
                 &g_binary_previous_message[g_binary_previous_message_offset],
                 remaining_bytes);
     if (len <= 0) {
