@@ -191,7 +191,7 @@ int clogging_binary_init(const char *progname, uint8_t progname_len,
                          const char *threadname, uint8_t threadname_len,
                          enum LogLevel level, clogging_handle_t handle) {
   if (g_binary_is_logging_initialized > 0) {
-    fprintf(stderr, "logging is already initialized or in the"
+    fprintf(stderr, "logging is already initialized for current thread or in the"
                     " process of initialization.\n");
     return -1;
   }

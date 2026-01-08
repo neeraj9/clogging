@@ -74,7 +74,7 @@ int clogging_basic_init(const char *progname, uint8_t progname_len,
                         const char *threadname, uint8_t threadname_len,
                         enum LogLevel level, const clogging_log_options_t *opts) {
   if (g_is_logging_initialized > 0) {
-    fprintf(stderr, "logging is already initialized or in the"
+    fprintf(stderr, "logging is already initialized for current thread or in the"
                     " process of initialization.\n");
     return -1;
   }
