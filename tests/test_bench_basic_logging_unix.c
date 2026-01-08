@@ -137,7 +137,7 @@ int main(int argc, char **argv) {
     }
   }
 
-  runall(pname, MAX_PROCESSNAME_SIZE, num_processes, num_threads, num_loops);
+  runall(pname, (uint8_t)(strlen(pname) + 1), num_processes, num_threads, num_loops);
 
   return 0;
 }

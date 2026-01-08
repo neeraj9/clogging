@@ -114,7 +114,7 @@ int test_static_string(int argc, char *argv[]) {
 
   /* printf("pname = %s\n", pname); */
   /* printf("argv[0] = %s\n", argv[0]); */
-  clogging_binary_init(pname, MAX_SIZE, "", 0, LOG_LEVEL_DEBUG, clogging_create_handle_from_fd(clientfd));
+  clogging_binary_init(pname, (uint8_t)(strlen(pname) + 1), "", 0, LOG_LEVEL_DEBUG, clogging_create_handle_from_fd(clientfd));
   assert(clogging_binary_get_loglevel() == LOG_LEVEL_DEBUG);
   LOG_DEBUG(format);
 
@@ -165,7 +165,7 @@ int test_variable_arguments(int argc, char *argv[]) {
 
   /* printf("pname = %s\n", pname); */
   /* printf("argv[0] = %s\n", argv[0]); */
-  clogging_binary_init(pname, MAX_SIZE, "", 0, LOG_LEVEL_DEBUG, clogging_create_handle_from_fd(clientfd));
+  clogging_binary_init(pname, (uint8_t)(strlen(pname) + 1), "", 0, LOG_LEVEL_DEBUG, clogging_create_handle_from_fd(clientfd));
   assert(clogging_binary_get_loglevel() == LOG_LEVEL_DEBUG);
   LOG_DEBUG(format, argint, argchar, arguint, arglongint, arglonglongint,
                    argulonglongint, argptr, argstr);

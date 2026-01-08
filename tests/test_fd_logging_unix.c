@@ -15,6 +15,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <sys/prctl.h>
+#include <string.h>
 
 /* as per man prctl(2) the size should be at least 16 bytes */
 #define MAX_SIZE 32
@@ -49,7 +50,7 @@ int main(int argc, char *argv[]) {
   assert(rc == 0);
   /* printf("pname = %s\n", pname); */
   /* printf("argv[0] = %s\n", argv[0]); */
-  clogging_fd_init(pname, MAX_SIZE, "", 0, LOG_LEVEL_DEBUG, clogging_create_handle_from_fd(fd), NULL);
+  clogging_fd_init(pname, (uint8_t)(strlen(pname) + 1), "", 0, LOG_LEVEL_DEBUG, clogging_create_handle_from_fd(fd), NULL);
   LOG_DEBUG("A fd debug log looks like this");
   assert(clogging_fd_get_loglevel() == LOG_LEVEL_DEBUG);
   clogging_fd_set_loglevel(LOG_LEVEL_INFO);

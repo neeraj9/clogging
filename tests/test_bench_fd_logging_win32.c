@@ -256,7 +256,7 @@ int main(int argc, const char *argv[]) {
     }
   }
 
-  runall(pname, MAX_PROCESSNAME_SIZE, num_processes, num_threads, num_loops, fd);
+  runall(pname, (uint8_t)(strlen(pname) + 1), num_processes, num_threads, num_loops, fd);
 
   if (is_udp_testing) {
     char endmsg[] = "end-of-test";
