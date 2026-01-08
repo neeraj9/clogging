@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.10)
 project(clogging VERSION 0.1 LANGUAGES C)
 
+# Generate compile_commands.json for IDE integration and tooling
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 # Set default build type for single-config generators
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
