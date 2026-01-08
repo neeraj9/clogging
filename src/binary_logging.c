@@ -355,6 +355,11 @@ void clogging_binary_logmsg(const char *filename, const char *funcname,
   va_start(ap, format);
   offset = fill_variable_arguments(store, offset, format, ap);
   va_end(ap);
+  if (offset < 0) {
+    /* format processing failed, drop the message */
+    ++g_binary_num_msg_drops;
+    return;
+  }
 
   /* now that the total length is known so lets fill the
    * size of the payload (without the bytes occupied
@@ -433,6 +438,9 @@ static ssize_t fill_variable_arguments(char *store, ssize_t offset, const char *
         store[offset] = 0x80 | sizeof(int);
         ++offset;
         rc = portable_copy(store, &offset, llval, sizeof(int));
+        if (rc < 0) {
+          return -1;
+        }
         /* offset is automatically updated */
       } else {
         /* store the size in bytes before the value */
@@ -463,36 +471,57 @@ static ssize_t fill_variable_arguments(char *store, ssize_t offset, const char *
         store[offset] = 0x80 | sizeof(short int);
         ++offset;
         rc = portable_copy(store, &offset, llval, sizeof(short int));
+        if (rc < 0) {
+          return -1;
+        }
       } else if (lspecifier == LS_L) {
         /* store the size in bytes before the value */
         store[offset] = 0x80 | sizeof(long int);
         ++offset;
         rc = portable_copy(store, &offset, llval, sizeof(long int));
+        if (rc < 0) {
+          return -1;
+        }
       } else if (lspecifier == LS_LL) {
         /* store the size in bytes before the value */
         store[offset] = 0x80 | sizeof(long long int);
         ++offset;
         rc = portable_copy(store, &offset, llval, sizeof(long long int));
+        if (rc < 0) {
+          return -1;
+        }
       } else if (lspecifier == LS_J) {
         /* store the size in bytes before the value */
         store[offset] = 0x80 | sizeof(intmax_t);
         ++offset;
         rc = portable_copy(store, &offset, llval, sizeof(intmax_t));
+        if (rc < 0) {
+          return -1;
+        }
       } else if (lspecifier == LS_Z) {
         /* store the size in bytes before the value */
         store[offset] = 0x80 | sizeof(size_t);
         ++offset;
         rc = portable_copy(store, &offset, llval, sizeof(size_t));
+        if (rc < 0) {
+          return -1;
+        }
       } else if (lspecifier == LS_T) {
         /* store the size in bytes before the value */
         store[offset] = 0x80 | sizeof(ptrdiff_t);
         ++offset;
         rc = portable_copy(store, &offset, llval, sizeof(ptrdiff_t));
+        if (rc < 0) {
+          return -1;
+        }
       } else {
         /* store the size in bytes before the value */
         store[offset] = 0x80 | sizeof(int);
         ++offset;
         rc = portable_copy(store, &offset, llval, sizeof(int));
+        if (rc < 0) {
+          return -1;
+        }
       }
       is_type_specifier = 0;
       lspecifier = LS_NONE;
