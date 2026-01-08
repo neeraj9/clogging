@@ -8,6 +8,11 @@ add_library(clogging
     logging_common.c
 )
 
+# Add UTF-8 utilities if UTF-8 support is enabled
+if(CLOGGING_USE_UTF8_STRINGS)
+    target_sources(clogging PRIVATE utf8_utils.c)
+endif()
+
 # Set public headers
 target_include_directories(clogging PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
@@ -48,6 +53,11 @@ install(FILES
     logging_common.h
     DESTINATION include/clogging
 )
+
+# Install UTF-8 utilities header if UTF-8 support is enabled
+if(CLOGGING_USE_UTF8_STRINGS)
+    install(FILES utf8_utils.h DESTINATION include/clogging)
+endif()
 
 # Create and install targets file
 install(EXPORT cloggingTargets

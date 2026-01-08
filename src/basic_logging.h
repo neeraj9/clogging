@@ -13,6 +13,18 @@
 
 #include <stdint.h>
 
+/* UTF-8 ENCODING NOTICE:
+ * When compiled with CLOGGING_USE_UTF8_STRINGS, all string parameters
+ * (progname, threadname, format strings, etc.) MUST be valid UTF-8.
+ * 
+ * - On Windows, use clogging_utf8_from_wide() to convert from UTF-16
+ * - On Unix/Linux, most systems already use UTF-8
+ * - Invalid UTF-8 will cause warnings in debug builds
+ * 
+ * Even without CLOGGING_USE_UTF8_STRINGS, UTF-8 strings work correctly,
+ * but validation and conversion utilities won't be available.
+ */
+
 #define BASIC_INIT_LOGGING(pn, pnlen, tn, tnlen, level)                                      \
   clogging_basic_init((pn), (pnlen), (tn), (tnlen), (level))
 #define BASIC_SET_LOG_LEVEL(level) clogging_basic_set_loglevel(level)

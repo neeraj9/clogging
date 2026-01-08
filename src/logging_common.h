@@ -13,6 +13,26 @@
 #include <stdint.h>
 #include <sys/types.h>
 
+/* UTF-8 ENCODING NOTICE:
+ * When CLOGGING_USE_UTF8_STRINGS is enabled, all string parameters to
+ * logging functions (progname, threadname, format strings, etc.) MUST be
+ * valid UTF-8 encoded.
+ * 
+ * - On Windows, use clogging_utf8_from_wide() to convert UTF-16 from Windows APIs
+ * - On Unix/Linux, most systems already use UTF-8 by default
+ * - Invalid UTF-8 will cause warnings in debug builds when validation is enabled
+ * 
+ * UTF-8 string support is optional and available when compiled with:
+ *   cmake -DCLOGGING_USE_UTF8_STRINGS=ON
+ * 
+ * Even without this flag, UTF-8 strings work correctly, but validation and
+ * conversion utilities won't be available.
+ */
+
+#ifdef CLOGGING_USE_UTF8_STRINGS
+#include "utf8_utils.h"
+#endif
+
 #ifdef _WIN32
 #include <winsock2.h>
 /* Windows doesn't have ssize_t, define it */

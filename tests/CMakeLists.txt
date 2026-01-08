@@ -18,6 +18,44 @@ foreach(test_target ${TEST_TARGETS})
     endif()
 endforeach()
 
+# UTF-8 tests (only if UTF-8 support is enabled)
+if(CLOGGING_USE_UTF8_STRINGS)
+    # Test UTF-8 validation functions
+    add_executable(test_utf8_validation test_utf8_validation.c)
+    target_link_libraries(test_utf8_validation PRIVATE clogging)
+    add_test(NAME test_utf8_validation COMMAND test_utf8_validation)
+    if(BUILD_SHARED_LIBS AND WIN32)
+        add_custom_command(TARGET test_utf8_validation POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            $<TARGET_FILE:clogging>
+            $<TARGET_FILE_DIR:test_utf8_validation>)
+    endif()
+    
+    # Test logging with UTF-8 strings
+    add_executable(test_utf8_logging test_utf8_logging.c)
+    target_link_libraries(test_utf8_logging PRIVATE clogging)
+    add_test(NAME test_utf8_logging COMMAND test_utf8_logging)
+    if(BUILD_SHARED_LIBS AND WIN32)
+        add_custom_command(TARGET test_utf8_logging POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            $<TARGET_FILE:clogging>
+            $<TARGET_FILE_DIR:test_utf8_logging>)
+    endif()
+    
+    # Test Windows UTF-16 to UTF-8 conversion (Windows only)
+    if(WIN32)
+        add_executable(test_utf8_conversion_win32 test_utf8_conversion_win32.c)
+        target_link_libraries(test_utf8_conversion_win32 PRIVATE clogging)
+        add_test(NAME test_utf8_conversion_win32 COMMAND test_utf8_conversion_win32)
+        if(BUILD_SHARED_LIBS)
+            add_custom_command(TARGET test_utf8_conversion_win32 POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                $<TARGET_FILE:clogging>
+                $<TARGET_FILE_DIR:test_utf8_conversion_win32>)
+        endif()
+    endif()
+endif()
+
 # Platform-specific test for test_bench_basic_logging
 if(WIN32)
     add_executable(test_bench_basic_logging test_bench_basic_logging_win32.c)

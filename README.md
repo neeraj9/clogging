@@ -123,11 +123,141 @@ cmake --install . --prefix "C:\Program Files\clogging"
 
 - `BUILD_TESTS` (ON/OFF, default: ON) - Build test executables
 - `BUILD_SHARED_LIBS` (ON/OFF, default: ON) - Build shared libraries instead of static
+- `CLOGGING_USE_UTF8_STRINGS` (ON/OFF, default: OFF) - Enable UTF-8 string validation and utilities
 
 Example:
 ```bash
-cmake .. -DBUILD_TESTS=OFF -DBUILD_SHARED_LIBS=OFF
+cmake .. -DBUILD_TESTS=OFF -DBUILD_SHARED_LIBS=OFF -DCLOGGING_USE_UTF8_STRINGS=ON
 ```
+
+## UTF-8 String Support
+
+clogging supports UTF-8 encoded strings when built with the `CLOGGING_USE_UTF8_STRINGS` option:
+
+```bash
+cmake -DCLOGGING_USE_UTF8_STRINGS=ON ..
+```
+
+### What UTF-8 Support Enables
+
+- **UTF-8 Validation**: In debug builds, validate that all strings passed to logging functions are valid UTF-8
+- **Windows UTF-16 Conversion**: Helper functions to convert Windows API strings (UTF-16) to UTF-8
+- **Unicode Output**: Proper handling of international characters, emoji, and special symbols
+- **Console Support**: Automatic Windows console configuration for UTF-8 output
+
+### Using UTF-8 Strings
+
+All string parameters to logging functions should be UTF-8 encoded:
+
+```c
+#include "logging.h"
+#include "utf8_utils.h"
+
+int main(void) {
+    INIT_LOGGING("myapp", 5, "", 0, LOG_LEVEL_INFO);
+    
+    // ASCII works everywhere
+    LOG_INFO("Hello World!");
+    
+    // UTF-8 with international characters
+    LOG_INFO("Café");  // Works on UTF-8 systems
+    LOG_INFO("Hello 🚀");  // Emoji support
+    LOG_INFO("你好世界");  // Chinese characters
+    
+    return 0;
+}
+```
+
+### Windows-Specific Usage
+
+On Windows, convert UTF-16 strings from the Windows API to UTF-8:
+
+```c
+#include "logging.h"
+#include "utf8_utils.h"
+#include <windows.h>
+
+int main(void) {
+    // Initialize UTF-8 console support
+    clogging_init_utf8_console();
+    
+    INIT_LOGGING("myapp", 5, "", 0, LOG_LEVEL_INFO);
+    
+    // Get Windows username (UTF-16)
+    wchar_t wide_username[256];
+    DWORD size = 256;
+    if (GetUserNameW(wide_username, &size)) {
+        // Convert UTF-16 to UTF-8
+        char utf8_username[512];
+        clogging_utf8_from_wide(wide_username, utf8_username, sizeof(utf8_username));
+        
+        // Use the UTF-8 string
+        LOG_INFO("User: %s", utf8_username);
+    }
+    
+    return 0;
+}
+```
+
+### Building with UTF-8 Support
+
+**Linux/macOS:**
+```bash
+cmake -DCLOGGING_USE_UTF8_STRINGS=ON ..
+cmake --build .
+ctest  # Runs UTF-8 tests
+```
+
+**Windows (MSVC):**
+```bash
+cmake -DCLOGGING_USE_UTF8_STRINGS=ON -G "Visual Studio 16 2019" ..
+cmake --build . --config Debug
+ctest
+```
+
+The UTF-8 flag automatically:
+- Enables the `/utf-8` compiler flag on MSVC
+- Ensures source files are treated as UTF-8 encoded
+- Builds UTF-8 validation and conversion utilities
+- Enables UTF-8 tests
+
+### UTF-8 API Reference
+
+When `CLOGGING_USE_UTF8_STRINGS` is enabled, these functions are available:
+
+**Validation:**
+- `int clogging_utf8_validate(const char *str, size_t len)` - Validate UTF-8 encoding
+- `int clogging_utf8_strlen(const char *str)` - Get character count (not byte count)
+
+**Windows Conversion (Windows only):**
+- `int clogging_utf8_from_wide(const wchar_t *wide, char *utf8, size_t utf8_size)` - Convert UTF-16 to UTF-8
+- `int clogging_utf8_to_wide(const char *utf8, wchar_t *wide, size_t wide_size)` - Convert UTF-8 to UTF-16
+- `int clogging_init_utf8_console(void)` - Configure Windows console for UTF-8
+
+**Utilities:**
+- `int clogging_utf8_is_continuation(unsigned char byte)` - Check for UTF-8 continuation byte
+- `int clogging_utf8_char_length(unsigned char first_byte)` - Get UTF-8 character length
+
+See `utf8_utils.h` for detailed documentation on each function.
+
+### Performance Considerations
+
+- UTF-8 validation only occurs in **debug builds** (no overhead in production)
+- Conversion utilities add minimal overhead (just before I/O)
+- Default mode (without the flag) has **zero performance impact**
+- Recommended: Use the flag during development, disable for production if not needed
+
+### Common Issues
+
+**On Windows, emoji and international characters don't display correctly:**
+1. Make sure your source files are saved as UTF-8 (with or without BOM)
+2. Use `/utf-8` compiler flag: `cmake .. -DCLOGGING_USE_UTF8_STRINGS=ON`
+3. Call `clogging_init_utf8_console()` early in main()
+
+**Validation errors in debug builds:**
+- Ensure all strings passed to logging functions are valid UTF-8
+- On Windows, convert from UTF-16 using `clogging_utf8_from_wide()`
+- Check that file encoding is UTF-8 (not ANSI/CP-1252)
 
 ## Installation
 

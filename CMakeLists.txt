@@ -17,6 +17,7 @@ set(CMAKE_C_EXTENSIONS ON)  # Enable gnu99 extensions
 # Options
 option(BUILD_TESTS "Build test executables" ON)
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
+option(CLOGGING_USE_UTF8_STRINGS "Enable UTF-8 string validation and utilities" ON)
 
 # Find required packages
 find_package(Threads REQUIRED)
@@ -42,6 +43,19 @@ check_symbol_exists(gmtime_r "time.h" HAVE_GMTIME_R)
 set(CMAKE_REQUIRED_DEFINITIONS ${CMAKE_REQUIRED_DEFINITIONS_SAVE})
 if(HAVE_GMTIME_R)
     add_compile_definitions(HAVE_GMTIME_R)
+endif()
+
+# UTF-8 string support
+if(CLOGGING_USE_UTF8_STRINGS)
+    add_compile_definitions(CLOGGING_USE_UTF8_STRINGS)
+    message(STATUS "Building clogging with UTF-8 string support")
+    
+    # Ensure source files are treated as UTF-8 encoded
+    if(MSVC)
+        add_compile_options(/utf-8)
+    elseif(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX OR CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+        add_compile_options(-finput-charset=UTF-8 -fexec-charset=UTF-8)
+    endif()
 endif()
 
 # Set compile flags (compiler-specific)
