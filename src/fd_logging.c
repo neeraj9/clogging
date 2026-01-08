@@ -267,7 +267,7 @@ void clogging_fd_logmsg(const char *funcname, int linenum, enum LogLevel level,
    *		<LEVEL> = DEBUG | INFO | WARNING | ERROR
    *		<CONTENT> = <FUNCTION/MODULE>: <APPLICATION_MESSAGE>
    */
-  if (g_fd_log_options.prefix_fields_flag = CLOGGING_PREFIX_DEFAULT) {
+  if (g_fd_log_options.prefix_fields_flag == CLOGGING_PREFIX_DEFAULT) {
     /* optimization for default setting */
     len = snprintf(&g_fd_total_message[msg_offset], TOTAL_MSG_BYTES - msg_offset,
                    "%s %s %s%s[%d] %s %s(%d): %s\n", time_str, g_fd_hostname,
