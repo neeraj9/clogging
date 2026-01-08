@@ -36,9 +36,9 @@ void *work(void *data) {
   struct context *ctx = (struct context *)data;
   int i = 0;
   char threadname[MAX_THREADNAME_SIZE];
-  snprintf(threadname, MAX_THREADNAME_SIZE, "thread-%d", ctx->threadindex);
+  int threadname_len = snprintf(threadname, MAX_THREADNAME_SIZE, "thread-%d", ctx->threadindex);
 
-  BASIC_INIT_LOGGING(ctx->processname, ctx->processname_len, threadname, LOG_LEVEL_INFO);
+  BASIC_INIT_LOGGING(ctx->processname, ctx->processname_len, threadname, threadname_len, LOG_LEVEL_INFO);
 
   for (i = 0; i < ctx->num_loops; ++i) {
     BASIC_LOG_INFO("Some log which gets printed to console.");

@@ -194,11 +194,9 @@ int analyze_received_binary_message(const char *msg, const char *buf,
   int rc = 0;
   int i = 0;
   struct variable_arg args[MAX_NUM_VARIABLE_ARGS];
-  int is_little_endian = 0;
 
   /* determine the endianness */
   rc = 1;
-  is_little_endian = (*((char *)&rc)) & 0x00ff;
 
   printf("received buf[%d] = [", buflen);
   for (i = 0; i < buflen; ++i) {
@@ -345,7 +343,7 @@ int test_static_string(int argc, char *argv[]) {
 
   /* printf("pname = %s\n", pname); */
   /* printf("argv[0] = %s\n", argv[0]); */
-  BINARY_INIT_LOGGING(pname, "", LOG_LEVEL_DEBUG, clogging_create_handle_from_fd(clientfd));
+  BINARY_INIT_LOGGING(pname, MAX_SIZE, "", 0, LOG_LEVEL_DEBUG, clogging_create_handle_from_fd(clientfd));
   assert(BINARY_GET_LOG_LEVEL() == LOG_LEVEL_DEBUG);
   BINARY_LOG_DEBUG(msg);
 
@@ -396,7 +394,7 @@ int test_variable_arguments(int argc, char *argv[]) {
 
   /* printf("pname = %s\n", pname); */
   /* printf("argv[0] = %s\n", argv[0]); */
-  BINARY_INIT_LOGGING(pname, "", LOG_LEVEL_DEBUG, clogging_create_handle_from_fd(clientfd));
+  BINARY_INIT_LOGGING(pname, MAX_SIZE, "", 0, LOG_LEVEL_DEBUG, clogging_create_handle_from_fd(clientfd));
   assert(BINARY_GET_LOG_LEVEL() == LOG_LEVEL_DEBUG);
   BINARY_LOG_DEBUG(format, argint, argchar, arguint, arglongint, arglonglongint,
                    argulonglongint, argptr, argstr);

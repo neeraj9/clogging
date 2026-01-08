@@ -32,6 +32,7 @@
 
 struct context {
   const char *processname;
+  uint8_t processname_len;
   int threadindex;
   int num_loops;
   int fd;
@@ -41,9 +42,9 @@ void *work(void *data) {
   struct context *ctx = (struct context *)data;
   int i = 0;
   char threadname[MAX_THREADNAME_SIZE];
-  snprintf(threadname, MAX_THREADNAME_SIZE, "thread-%d", ctx->threadindex);
+  int threadname_len = snprintf(threadname, MAX_THREADNAME_SIZE, "thread-%d", ctx->threadindex);
 
-  FD_INIT_LOGGING(ctx->processname, threadname, LOG_LEVEL_INFO, clogging_create_handle_from_fd(ctx->fd));
+  FD_INIT_LOGGING(ctx->processname, ctx->processname_len, threadname, threadname_len, LOG_LEVEL_INFO, clogging_create_handle_from_fd(ctx->fd));
 
   for (i = 0; i < ctx->num_loops; ++i) {
     FD_LOG_INFO("Some log which gets printed to console.");
@@ -51,13 +52,13 @@ void *work(void *data) {
   return 0;
 }
 
-int runall(const char *pname, int num_processes, int num_threads, int num_loops,
+int runall(const char *pname, uint8_t processname_len, int num_processes, int num_threads, int num_loops,
            int fd) {
   /* POSIX implementation: use fork() and threads */
   long i;
   pid_t pid;
 
-  FD_INIT_LOGGING(pname, "", LOG_LEVEL_DEBUG, clogging_create_handle_from_fd(fd));
+  FD_INIT_LOGGING(pname, processname_len, "", 0, LOG_LEVEL_DEBUG, clogging_create_handle_from_fd(fd));
 
   FD_LOG_INFO("Benchmarking starts");
   FD_LOG_INFO("pname = %s, np = %d, nt = %d, nl = %d\n", pname, num_processes,
@@ -76,6 +77,7 @@ int runall(const char *pname, int num_processes, int num_threads, int num_loops,
 
       for (j = 0; j < num_threads; j++) {
         thread_contexts[j].processname = pname;
+        thread_contexts[j].processname_len = processname_len;
         thread_contexts[j].threadindex = j;
         thread_contexts[j].num_loops = num_loops;
         thread_contexts[j].fd = fd;
@@ -218,7 +220,7 @@ int main(int argc, const char *argv[]) {
     }
   }
 
-  runall(pname, num_processes, num_threads, num_loops, fd);
+  runall(pname, MAX_PROCESSNAME_SIZE, num_processes, num_threads, num_loops, fd);
 
   if (is_udp_testing) {
     char endmsg[] = "end-of-test";
